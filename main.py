@@ -1,6 +1,9 @@
 # main.py in the root directory
 from fastapi import FastAPI
 import importlib
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # List of service modules (you can automate this discovery)
 services = [

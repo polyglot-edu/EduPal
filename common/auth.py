@@ -1,18 +1,12 @@
 import os
-from datetime import datetime, timedelta
-from fastapi import HTTPException, Depends
-from fastapi.security import OAuth2PasswordBearer
-from dotenv import load_dotenv
+from fastapi import HTTPException
 
-# Load the .env file
-load_dotenv()
-
-# Load JWT config
 SECRET_KEY = os.getenv("SECRET_KEY")
 
-def authenticate(token: str):
-    print(token)
-    print(SECRET_KEY)
-    #if token != SECRET_KEY:
-        #raise HTTPException(status_code=401, detail="Invalid authentication credentials")
+def authenticate(access_key: str):
+    """
+    Authenticates the access_key by comparing it to the SECRET_KEY stored in .env.
+    """
+    if access_key != SECRET_KEY:
+        raise HTTPException(status_code=401, detail="Invalid authentication credentials")
     return True

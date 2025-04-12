@@ -3,7 +3,6 @@ from pydantic import BaseModel
 from typing import List
 from .vector_search_service import query_documents
 from common.auth import authenticate
-from dotenv import load_dotenv
 import os
 
 class QueryRequest(BaseModel):
@@ -51,7 +50,6 @@ async def query_vector_search(request: QueryRequest, access_key: str = Header(..
         # Fallback to environment variables if empty
         if not request.uri or not request.db_name or not request.collection_name or request.uri == "" or request.db_name == "" or request.collection_name == "":
             print("Using environment variables for MongoDB connection details...")
-            load_dotenv()
             request.uri = os.getenv("MONGO_URI", "")
             request.db_name = "edu_db"
             request.collection_name = "materials"
