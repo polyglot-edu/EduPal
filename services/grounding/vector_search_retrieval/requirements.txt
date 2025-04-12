@@ -1,0 +1,4 @@
+pymongo==4.11.1
+python-dotenv==1.0.1
+langchain_mongodb==0.4.0
+langchain_huggingface==0.1.2
