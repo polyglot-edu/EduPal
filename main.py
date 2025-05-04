@@ -2,30 +2,37 @@
 from fastapi import FastAPI
 import importlib
 from dotenv import load_dotenv
+from  services.auth.auth_api import router as auth_router  # Import the router from auth_api.py
+
 
 load_dotenv()
 
 # List of service modules (you can automate this discovery)
 services = [
-    "services.grounding.upload.upload_api",
-    "services.grounding.vector_search_retrieval.vector_search_api",
-    "services.tasks.summarize.summarize_api",
-    "services.tasks.translate.translate_api",
-    "services.tasks.plan_lesson.plan_lesson_api",
-    "services.tasks.plan_course.plan_course_api",
-    "services.tasks.generate_material.generate_material_api",
-    "services.tasks.generate_activity.generate_activity_api",
-    "services.tasks.evaluate.evaluate_api",
-    "services.tasks.define_syllabus.define_syllabus_api",
-    "services.tasks.analyse_material.analyse_material_api",
+    "services.agent.grounding.upload.upload_api",
+    "services.agent.grounding.vector_search_retrieval.vector_search_api",
+    "services.agent.grounding.analyse_material.analyse_material_api",
+    "services.agent.utils.summarize.summarize_api",
+    "services.agent.utils.translate.translate_api",
+    "services.agent.tools.plan_lesson.plan_lesson_api",
+    "services.agent.tools.plan_course.plan_course_api",
+    "services.agent.tools.generate_material.generate_material_api",
+    "services.agent.tools.generate_activity.generate_activity_api",
+    "services.agent.tools.evaluate.evaluate_api",
+    "services.agent.tools.define_syllabus.define_syllabus_api",
 ]
 
 # Create FastAPI app
 app = FastAPI(
-    title="E4E APIs",
+    title="EduPal APIs",
     description="APIs for E4E services",
-    version="0.1.0"
+    version="0.1.0",
+    security=[{"bearerAuth": []}],
 )
+
+# Include the authentication router
+app.include_router(auth_router)
+print(f"Successfully loaded API routes from auth.auth_api")
 
 # Root endpoint
 @app.get("/")

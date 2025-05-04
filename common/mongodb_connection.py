@@ -27,3 +27,28 @@ def get_mongo_collection(db_name, collection_name, uri):
         return db[collection_name]
     except errors.PyMongoError as e:
         raise RuntimeError(f"MongoDB operation error: {e}")
+
+def get_mongo_db(db_name, uri):
+    """Returns a database from a MongoDB instance with detailed error handling.
+    This function connects to a MongoDB instance, verifies the existence of a specified database,
+    and returns the requested database. It includes detailed error handling for connection issues
+    and missing databases."""
+    try:
+        # Attempt to connect to MongoDB
+        client = MongoClient(uri, serverSelectionTimeoutMS=5000)  # 5s timeout
+        client.admin.command('ping')  # Test connection
+    except errors.ServerSelectionTimeoutError:
+        raise ConnectionError("Failed to connect to MongoDB. Check the URI and server status.")
+    except errors.PyMongoError as e:
+        raise RuntimeError(f"MongoDB connection error: {e}")
+
+    try:
+        # Access the specified database
+        if db_name not in client.list_database_names():
+            raise ValueError(f"Database '{db_name}' does not exist.")
+
+        return client[db_name]
+    except errors.PyMongoError as e:
+        raise RuntimeError(f"MongoDB operation error: {e}")
+    
+    
