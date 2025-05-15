@@ -4,7 +4,7 @@ from typing import Optional
 from passlib.context import CryptContext
 from datetime import datetime, timedelta
 import jwt
-from .auth_utils import UserInDB, TokenData, JWTBearer
+from .auth_utils import TokenData, JWTBearer, PersonalInfo, UserProfileDocument
 
 # Password context for hashing
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -14,18 +14,6 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 security = JWTBearer()
 
 # Helper functions
-def get_next_user_number(db):
-    """Get the next user number for collection naming"""
-    # Check existing collections to determine the next number
-    collections = db.list_collection_names()
-    user_collections = [c for c in collections if c.startswith("user_")]
-    if not user_collections:
-        return 1
-    
-    # Extract numbers from collection names
-    numbers = [int(c.split("_")[1]) for c in user_collections]
-    return max(numbers) + 1
-
 def get_password_hash(password):
     """Hash a password for storing"""
     return pwd_context.hash(password)
@@ -34,23 +22,24 @@ def verify_password(plain_password, hashed_password):
     """Verify a stored password against a provided password"""
     return pwd_context.verify(plain_password, hashed_password)
 
-def get_user(db, username: str):
+async def get_user(db, username: str):
     """Get user data from the users collection"""
     users_collection = db.users
-    user = users_collection.find_one({"username": username})
+    user = await users_collection.find_one({"username": username})
     if user:
-        user["id"] = str(user["_id"])
-        return UserInDB(**user)
+        hashed_password = user.get("password")
+        salt = user.get("password_salt", None)
+        return hashed_password, salt
     return None
 
-def authenticate_user(db, username: str, password: str):
+async def authenticate_user(db, username: str, password: str):
     """Authenticate a user by username and password"""
-    user = get_user(db, username)
-    if not user:
+    hashed_password, salt = await get_user(db, username)
+    if not hashed_password:
         return False
-    if not verify_password(password, user.hashed_password):
+    if not verify_password(f"{password}{salt}", hashed_password):
         return False
-    return user
+    return True
 
 def create_access_token(exp_time: int, secret_key: str, algorithm: str, data: dict, expires_delta: Optional[timedelta] = None):
     """Create an access token for the user"""
@@ -94,12 +83,89 @@ def decode_token(token: str, secret_key: str, algorithm: str) -> Optional[TokenD
     except jwt.PyJWTError:
         return None
 
-def invalidate_token(db, username: str, token: str):
-    """Invalidate a user's token"""
+async def validate_token(db, token: str, secret_key: str, algorithm: str):
+    """Validate a request by checking the token"""
+    # 1. Decode token to get username (without validation)
+    token_data = decode_token(token, secret_key, algorithm)
+    if token_data is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid token",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    
+    username = token_data.username
+    
+    # 2. Find the user and their tokens
     users_collection = db.users
-    result = users_collection.update_one(
-        {"username": username},
-        {"$pull": {"active_tokens": token}},
-        {"$push": {"invalidated_tokens": token}}
-    )
-    return result.modified_count > 0
+    user = await users_collection.find_one({"username": username})
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+
+    # 3. Check if token hash exists in invalidated_tokens
+    invalidated_tokens = user.get("invalidated_tokens", [])
+    if token in invalidated_tokens:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token already invalidated"
+        )
+    
+    # 4. Check if token hash exists in active_tokens
+    active_tokens = user.get("active_tokens", [])
+    salts = user.get("token_salts", [])
+    
+    # Find the matching token hash
+    token_found = False
+    token_hash_to_remove = None
+    salt_to_remove = None
+    
+    for i, salt in enumerate(salts):
+        if i < len(active_tokens):
+            # Check if the calculated hash matches or if verify_password confirms they're the same
+            if verify_password(token + salt, active_tokens[i]):
+                token_found = True
+                token_hash_to_remove = active_tokens[i]
+                salt_to_remove = salt
+                break
+    
+    if not token_found:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token not found in active sessions"
+        )
+    
+    return username, token_hash_to_remove, salt_to_remove
+
+async def  get_personal_info(user_collection)->PersonalInfo:
+    """
+    Get the personal information of the user from the collection
+    """
+    try:
+        personal_info_doc = await user_collection.find_one(
+            {"document_type": "profile"},
+            {"personal_info": 1}
+        )
+        if personal_info_doc is None:
+            raise Exception("Personal information not found")
+        personal_info = personal_info_doc.get("personal_info", {})
+        return PersonalInfo(**personal_info)
+    except Exception as e:
+        raise Exception(f"Error in get_personal_info: {e}")
+
+async def get_profile(user_collection)->UserProfileDocument:
+    """
+    Get the profile of the user from the collection
+    """
+    try:
+        profile_doc = await user_collection.find_one(
+            {"document_type": "profile"}
+        )
+        
+        if profile_doc is None:
+            raise Exception("Profile not found")
+        return profile_doc
+    except Exception as e:
+        raise Exception(f"Error in get_profile: {e}")

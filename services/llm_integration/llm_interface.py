@@ -9,10 +9,10 @@ class LLMInterface(ABC):
     def generate_text(
         self,
         prompt: str,
-        context: Optional[List[str]] = None,
-        history: Optional[List[Dict[str, str]]] = None,
+        context: Optional[str] = "",
+        history: Optional[str] = "",
         options: Optional[Dict] = None,
-        user_info: Optional[Dict] = None,
+        user_info: Optional[str] = "",
     ) -> str:
         pass
 
@@ -21,10 +21,10 @@ class LLMInterface(ABC):
         self,
         prompt: str,
         response_model: Type[BaseModel],
-        context: Optional[List[str]] = None,
-        history: Optional[List[Dict[str, str]]] = None,
+        context: Optional[str] = "",
+        history: Optional[str] = "",
         options: Optional[Dict] = None,
-        user_info: Optional[Dict] = None,
+        user_info: Optional[str] = "",
     ) -> BaseModel:
         pass
 

@@ -1,21 +1,20 @@
-from pydantic import BaseModel
-from typing import Optional
+from pydantic import BaseModel, Field
+from typing import Optional, Dict, List
 from fastapi import HTTPException, Request, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from typing import Optional
-from pydantic import BaseModel
+from datetime import datetime, timezone
+from bson import ObjectId
 
 # Models
-class UserCreate(BaseModel):
+class UserCreateRequest(BaseModel):
     username: str
     password: str
+    role: Optional[str] = "student"  # defaults to "student" if not provided
 
 class User(BaseModel):
     id: str
     username: str
-
-class UserInDB(User):
-    hashed_password: str
 
 class Token(BaseModel):
     access_token: str
@@ -43,3 +42,33 @@ class JWTBearer(HTTPBearer):
                 status_code=status.HTTP_403_FORBIDDEN, 
                 detail="Invalid authorization code."
             )
+
+
+#--------------------------------------------------------------------------------------------------------------------------
+class UserPreferences(BaseModel):
+    theme: str = "light"
+    language: str = "en"
+    notification_settings: Dict[str, bool] = Field(
+        default_factory=lambda: {"email": True, "push": True}
+    )
+    email: str = ""
+
+class PersonalInfo(BaseModel):
+    role: str = "student"
+    name: Optional[str] = None
+    age: Optional[int] = None
+    location: Optional[str] = None
+    interests: Optional[List[str]] = Field(default_factory=list)
+    education_level: Optional[str] = None
+    timezone: Optional[str] = None
+
+    def to_str(self) -> str:
+        return "\n".join([f"{k}: {v}" for k, v in self.model_dump().items()
+                         if v is not None and v != [] and v != ""])
+
+class UserProfileDocument(BaseModel):
+    document_type: str = "profile"
+    preferences: UserPreferences = Field(default_factory=UserPreferences)
+    personal_info: PersonalInfo
+    created_at: datetime = Field(default_factory=lambda: datetime.now(tz=timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(tz=timezone.utc))

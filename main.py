@@ -3,7 +3,7 @@ from fastapi import FastAPI
 import importlib
 from dotenv import load_dotenv
 from  services.auth.auth_api import router as auth_router  # Import the router from auth_api.py
-
+from services.agent.orchestrator.memory.chat_api import router as chat_router
 
 load_dotenv()
 
@@ -31,8 +31,9 @@ app = FastAPI(
 )
 
 # Include the authentication router
+app.include_router(chat_router)
 app.include_router(auth_router)
-print(f"Successfully loaded API routes from auth.auth_api")
+print(f"Successfully loaded API routes from auth and chatbot modules")
 
 # Root endpoint
 @app.get("/")

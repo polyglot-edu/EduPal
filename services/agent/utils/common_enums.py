@@ -11,12 +11,12 @@ class TextStyle(Enum):
   STRUCTURED = "structured and informative"
 
 class EducationLevel(Enum):
-  ELEMENTARY = "elementary school"
-  MIDDLE_SCHOOL = "middle school"
-  HIGH_SCHOOL = "high school"
-  COLLEGE = "college"
-  GRADUATE = "graduate"
-  PROFESSIONAL = "professional"
+    ELEMENTARY = "elementary school"
+    MIDDLE_SCHOOL = "middle school"
+    HIGH_SCHOOL = "high school"
+    COLLEGE = "college"
+    GRADUATE = "graduate"
+    PROFESSIONAL = "professional"
 
 class LearningOutcome(Enum):
     DECLARATIVE = "the ability to recall or recognize simple facts and definitions"

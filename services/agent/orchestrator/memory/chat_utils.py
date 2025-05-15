@@ -1,129 +1,104 @@
 from pydantic import BaseModel, Field
-from typing import Dict, List, Optional, Any, Union
-from datetime import datetime, timedelta, timezone
+from typing import Dict, List, Optional, Any
+from datetime import datetime, timezone
 from bson import ObjectId
 
-# Custom field for handling ObjectId
-class PyObjectId(ObjectId):
-    @classmethod
-    def __get_validators__(cls):
-        yield cls.validate
+#--------------------------------------------------------------------------------------------------------------------------
+class Resource(BaseModel):
+    title: str
+    description: str
 
-    @classmethod
-    def validate(cls, v):
-        if not ObjectId.is_valid(v):
-            raise ValueError("Invalid ObjectId")
-        return ObjectId(v)
-
-    @classmethod
-    def __modify_schema__(cls, field_schema):
-        field_schema.update(type="string")
-
-# Base model for MongoDB documents with ID
-class MongoBaseModel(BaseModel):
-    id: Optional[PyObjectId] = Field(alias="_id", default=None)
-    
     class Config:
         json_encoders = {ObjectId: str}
-        allow_population_by_field_name = True
+        arbitrary_types_allowed = True
 
-#--------------------------------------------------------------------------------------------------------------------------
-# Message model
 class Message(BaseModel):
-    role: str  # "user" or "assistant"
+    role: str
     content: str
-    timestamp: datetime = Field(default_factory=datetime.now(tz=timezone.utc))
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(tz=timezone.utc))
+    in_memory: bool = False
+    resources: Optional[List[Resource]] = Field(default_factory=list)
 
-# Long-term memory model
+    def resources_to_str(self) -> str:
+        if not self.resources:
+            return ""
+        return "\n".join([f"Title: {resource.title} - Description: {resource.description}"
+                         for resource in self.resources])
+
+    class Config:
+        json_encoders = {
+            datetime: lambda dt: dt.isoformat(),
+            ObjectId: str
+        }
+
 class Memory(BaseModel):
     key_insights: List[str] = Field(default_factory=list)
     important_facts: Dict[str, Any] = Field(default_factory=dict)
     summary: str = ""
 
-# Chat document model
-class ChatDocument(MongoBaseModel):
+    def to_str(self) -> str:
+        insights = "\n- ".join(self.key_insights) if self.key_insights else "None"
+        facts = "\n- ".join([f"{k}: {v}" for k, v in self.important_facts.items()]) if self.important_facts else "None"
+        return f"Key Insights:\n- {insights}\n\nImportant Facts:\n- {facts}\n\nSummary:\n{self.summary}"
+
+class ChatDocument(BaseModel):
     document_type: str = "chat"
-    chat_id: str
     chat_name: str
-    created_at: datetime = Field(default_factory=datetime.now(tz=timezone.utc))
-    updated_at: datetime = Field(default_factory=datetime.now(tz=timezone.utc))
+    created_at: datetime = Field(default_factory=lambda: datetime.now(tz=timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(tz=timezone.utc))
+    recent_messages: List[Message] = Field(default_factory=list)
     messages: List[Message] = Field(default_factory=list)
     memory: Memory = Field(default_factory=Memory)
 
+    class Config:
+        json_encoders = {
+            datetime: lambda dt: dt.isoformat(),
+            ObjectId: str
+        }
+
+class ChatDocumentSimplified(BaseModel):
+    chat_name: str
+    created_at: datetime = Field(default_factory=lambda: datetime.now(tz=timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(tz=timezone.utc))
+
+    class Config:
+        json_encoders = {
+            datetime: lambda dt: dt.isoformat(),
+            ObjectId: str
+        }
+
 #--------------------------------------------------------------------------------------------------------------------------
-# User preferences model
-class UserPreferences(BaseModel):
-    theme: str = "light"
-    language: str = "en"
-    notification_settings: Dict[str, bool] = Field(
-        default_factory=lambda: {"email": True, "push": True}
+# Create a request model for chat creation
+class ChatCreateRequest(BaseModel):
+    chat_name: str
+
+class UpdateMemoryRequest(BaseModel):
+    ltm_length: int = 1207
+    messages: List[Message] = Field(default_factory=list)
+    memory: Memory = Field(default_factory=Memory)
+    model: Optional[str] = "GEMINI"
+
+def update_memory_prompt(request: UpdateMemoryRequest) -> str:
+    messages_text = "\n".join(
+        [f"{msg.role.upper()}: {msg.content}" +
+         (f"\nResources:\n{msg.resources_to_str()}" if msg.resources else "")
+         for msg in request.messages]
     )
 
-# User personal information model
-class PersonalInfo(BaseModel):
-    role: str
-    location: Optional[str] = None
-    interests: List[str] = Field(default_factory=list)
-    education_level: Optional[str] = None
-    timezone: Optional[str] = None
-    # Add more fields as needed for your application
+    return f"""You are an AI assistant helping to maintain long-term memory for a conversation between a user and an assistant.
+    Below are recent messages from the conversation. Based on these, update the memory fields as follows:
+    - key_insights: high-level takeaways, goals, or behavioral patterns from the conversation
+    - important_facts: structured factual information (dates, preferences, names, entities, etc.)
+    - summary: a concise and clear natural-language summary of the recent exchange
 
-# User profile document model
-class UserProfileDocument(MongoBaseModel):
-    document_type: str = "profile"
-    name: Optional[str] = None
-    preferences: UserPreferences = Field(default_factory=UserPreferences)
-    personal_info: PersonalInfo = Field(default_factory=PersonalInfo)
-    created_at: datetime = Field(default_factory=datetime.now(tz=timezone.utc))
-    updated_at: datetime = Field(default_factory=datetime.now(tz=timezone.utc))
+    IMPORTANT:
+    - Be concise and organized. Group similar facts where possible.
+    - Keep important information from existing memory.
+    - Ensure the values of the fields are in the same language as the messages and of the existing memory.
 
-#--------------------------------------------------------------------------------------------------------------------------
-# Create chat request model
-class CreateChatRequest(BaseModel):
-    chat_name: str
+    EXISTING MEMORY:
+    {request.memory.to_str()}
 
-# Add message request model
-class AddMessageRequest(BaseModel):
-    role: str  # "user" or "assistant"
-    content: str
-
-# Update LTM request model
-class UpdateMemoryRequest(BaseModel):
-    key_insight: Optional[str] = None
-    important_facts: Optional[Dict[str, Any]] = None
-    summary: Optional[str] = None
-
-# Update profile request model
-class UpdateProfileRequest(BaseModel):
-    name: Optional[str] = None
-    preferences: Optional[UserPreferences] = None
-    personal_info: Optional[PersonalInfo] = None
-
-# User collection response model
-class UserCollection(BaseModel):
-    username: str
-    collection_name: str
-
-# Chat summary model (for listing chats)
-class ChatSummary(BaseModel):
-    chat_id: str
-    chat_name: str
-    created_at: datetime
-    updated_at: datetime
-    summary: Optional[str] = None  # From ltm.summary
-
-# Response models
-class ChatResponse(BaseModel):
-    success: bool
-    chat: Optional[ChatDocument] = None
-    message: Optional[str] = None
-
-class ProfileResponse(BaseModel):
-    success: bool
-    profile: Optional[UserProfileDocument] = None
-    message: Optional[str] = None
-
-class ChatsListResponse(BaseModel):
-    success: bool
-    chats: List[ChatSummary] = Field(default_factory=list)
-    message: Optional[str] = None
+    RECENT MESSAGES:
+    {messages_text}
+    """

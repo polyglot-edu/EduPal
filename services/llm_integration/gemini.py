@@ -18,10 +18,10 @@ class GeminiLLM(LLMInterface):
     def generate_text(
         self,
         prompt: str,
-        context: Optional[List[str]] = None,
-        history: Optional[List[Dict[str, str]]] = None,
+        context: Optional[str] = "",
+        history: Optional[str] = "",
         options: Optional[Dict] = {"temperature": 0.0, "max_output_tokens": 1550},
-        user_info: Optional[Dict] = None,
+        user_info: Optional[str] = "",
         instructions: Optional[str] = "",
     ) -> str:
         
@@ -62,10 +62,10 @@ class GeminiLLM(LLMInterface):
         self,
         prompt: str,
         response_model: Type[BaseModel],
-        context: Optional[List[str]] = None,
-        history: Optional[List[Dict[str, str]]] = None,
+        context: Optional[str] = "",
+        history: Optional[str] = "",
         options: Optional[Dict] = {"temperature": 0.0, "max_output_tokens": 1550},
-        user_info: Optional[Dict] = None,
+        user_info: Optional[str] = "",
         instructions: Optional[str] = "",
     ) -> BaseModel:
         
