@@ -2,6 +2,8 @@
 /E4E_OERs_Cluster_MongoDB.txt
 /venv
 /__pycache__
+__pycache__/
+*.pyc
 /.pytest_cache
 /services/__pycache__
 /tests/.pytest_cache
