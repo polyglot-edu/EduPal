@@ -54,13 +54,12 @@ class UserPreferences(BaseModel):
     email: str = ""
 
 class PersonalInfo(BaseModel):
-    role: str = "student"
-    name: Optional[str] = None
-    age: Optional[int] = None
-    location: Optional[str] = None
-    interests: Optional[List[str]] = Field(default_factory=list)
-    education_level: Optional[str] = None
-    timezone: Optional[str] = None
+    role: str
+    name: Optional[str]
+    age: Optional[int]
+    location: Optional[str]
+    interests: Optional[List[str]]
+    education_level: Optional[str]
 
     def to_str(self) -> str:
         return "\n".join([f"{k}: {v}" for k, v in self.model_dump().items()

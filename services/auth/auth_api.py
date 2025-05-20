@@ -34,7 +34,11 @@ router = APIRouter(
 async def signup(request: UserCreateRequest = Body(...), access_key: str = Header(..., alias="access_key") ):
     """
     Create a new user profile with default values.
-    Only username, password, and optionally role are required.
+    Parameters:
+    - request: UserCreateRequest object containing username, password, and role (defaults to "student").
+    - access_key: Access key for authentication (in headers).
+    Returns:
+    - User object containing the user's ID and username.
     """
     try:
         # Authenticate access key
@@ -105,7 +109,13 @@ async def signup(request: UserCreateRequest = Body(...), access_key: str = Heade
 
 @router.post("/login", response_model=Token)
 async def login(form_data: OAuth2PasswordRequestForm = Depends(), access_key: str = Header(..., alias="access_key")):
-    """Login to get an access token"""
+    """Login to get an access token
+    Parameters:
+    - form_data: OAuth2PasswordRequestForm object containing username and password.
+    - access_key: Access key for authentication (in headers).
+    Returns:
+    - JWT Token object containing the access token and token type (Bearer).
+    """
     try:
         # Authenticate user
         authenticate(access_key)
@@ -149,7 +159,13 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends(), access_key: st
 
 @router.post("/logout")
 async def logout(token: str = Header(..., alias="token"), access_key: str = Header(..., alias="access_key")):
-    """Logout and invalidate the current token"""
+    """Logout and invalidate the current token
+    Parameters:
+    - token: JWT token to be invalidated (in headers).
+    - access_key: Access key for authentication (in headers).
+    Returns:
+    - Message indicating successful logout.   
+    """
     try:
         # Authenticate access key
         authenticate(access_key)
@@ -187,7 +203,13 @@ async def logout(token: str = Header(..., alias="token"), access_key: str = Head
 
 @router.delete("/delete")
 async def delete_user(token: str = Header(..., alias="token"), access_key: str = Header(..., alias="access_key")):
-    """Delete user account"""
+    """Delete user account
+    Parameters:
+    - token: JWT token for authentication (in headers).
+    - access_key: Access key for authentication (in headers).
+    Returns:
+    - Message indicating successful deletion.
+    """
     try:
         # Authenticate access key
         authenticate(access_key)
@@ -216,7 +238,13 @@ async def delete_user(token: str = Header(..., alias="token"), access_key: str =
 
 @router.get("/profile", response_model=UserProfileDocument)
 async def read_users_me(token: str = Header(..., alias="token"), access_key: str = Header(..., alias="access_key")):
-    """Get current user information"""
+    """Get current user information
+    Parameters:
+    - token: JWT token for authentication (in headers).
+    - access_key: Access key for authentication (in headers).
+    Returns:
+    - UserProfileDocument object containing the user's profile information.
+    """
     try: 
         # Authenticate access key
         authenticate(access_key)
@@ -236,7 +264,14 @@ async def read_users_me(token: str = Header(..., alias="token"), access_key: str
 
 @router.put("/update/personal_info", response_model=str)
 async def update_personal_info(personal_info: PersonalInfo = Body(...), token: str = Header(..., alias="token"), access_key: str = Header(..., alias="access_key")):
-    """Update or reset the user's personal info"""
+    """Update or reset the user's personal info
+    Parameters:
+    - personal_info: PersonalInfo object containing the user's personal information (in body).
+    - token: JWT token for authentication (in headers).
+    - access_key: Access key for authentication (in headers).
+    Returns:
+    - Message indicating successful update.
+    """
     try:
         # Authenticate access key
         authenticate(access_key)
@@ -272,7 +307,14 @@ async def update_personal_info(personal_info: PersonalInfo = Body(...), token: s
 
 @router.put("/update/preferences", response_model=str)
 async def update_preferences(preferences: UserPreferences = Body(...), token: str = Header(..., alias="token"), access_key: str = Header(..., alias="access_key")):
-    """Update or reset the user's personal info"""
+    """Update or reset the user's personal info
+    Parameters:
+    - preferences: UserPreferences object containing the user's preferences (in body).
+    - token: JWT token for authentication (in headers).
+    - access_key: Access key for authentication (in headers).
+    Returns:
+    - Message indicating successful update.
+    """
     try:
         # Authenticate access key
         authenticate(access_key)

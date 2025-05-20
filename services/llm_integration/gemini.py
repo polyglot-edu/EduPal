@@ -27,14 +27,15 @@ class GeminiLLM(LLMInterface):
         
         # compose the final prompt
         input_prompt = ""
-        if context is not None:
-            input_prompt += "\n\nContext:\n" + "\n".join(context)
-        if history is not None:
-            for turn in history:
-                input_prompt += f"\nUser: {turn['user']}\nAssistant: {turn['assistant']}"
-        if user_info is not None:
+        if context is not None and context != "":
+            input_prompt += f"Context: {context}"
+        if user_info is not None and user_info != "":
             input_prompt += f"\nLong Term Memory User Info: {user_info}"
-        input_prompt += f"\n\n{prompt}"
+        if history is not None and history != "":
+            input_prompt += f"\nPrevious Messages:\n{history}"
+        input_prompt += f"\nrole:user\ncontent:{prompt}\nrole: assistant\ncontent:"
+
+        print(f"Input Prompt: {input_prompt}. \n")
 
         try:
             response = self.client.models.generate_content(
@@ -53,6 +54,7 @@ class GeminiLLM(LLMInterface):
                     #frequency_penalty=0.0,
                     ),
             )
+            
             return response.text
         except Exception as e:
             print(f"Error generating text with Gemini: {e}")
@@ -71,14 +73,15 @@ class GeminiLLM(LLMInterface):
         
         # compose the final prompt
         input_prompt = ""
-        if context is not None:
-            input_prompt += "\n\nContext:\n" + "\n".join(context)
-        if history is not None:
-            for turn in history:
-                input_prompt += f"\nUser: {turn['user']}\nAssistant: {turn['assistant']}"
-        if user_info is not None:
+        if context is not None and context != "":
+            input_prompt += f"Context: {context}"
+        if user_info is not None and user_info != "":
             input_prompt += f"\nLong Term Memory User Info: {user_info}"
-        input_prompt += f"\n\n{prompt}"
+        if history is not None and history != "":
+            input_prompt += f"\nPrevious Messages:\n{history}"
+        input_prompt += f"\nrole:user\ncontent:{prompt}\nrole: assistant\ncontent:"
+
+        print(f"Input Prompt: {input_prompt}. \n")
 
         try:
             response = self.client.models.generate_content(

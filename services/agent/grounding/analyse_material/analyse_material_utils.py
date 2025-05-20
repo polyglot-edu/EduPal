@@ -30,16 +30,16 @@ class Analysis(BaseModel):
 
 
 def analyse_material_prompt(text):
-   prompt = f"""You are an expert multilingual educator specialized in analysing educational material.
+   prompt = f"""You are an expert educator specialized in analysing educational material.
 
 ### Task
-Your task is to analyse the following material to extract meaningful information that will helpcorrectly categorize it.
+Your task is to analyse the following material to extract meaningful information that will help correctly categorize it.
 Material:
 {text}
 
 ### Information Structure
 Since you are highly organized, you will follow a structured approach to categorize the material. You will extract the following information:
-- **Language** (in English): The language of the material.
+- **Language** (in English): The main language the material is in. Note that material could have some words in other languages, but the main language is the one that is used for most of the content.
 - **Macro Subject** (in material's language): The general subject of the material. For example, if the material is about the the Roman Empire, the macro subject could be "History".
 - **Title** (in material's language): A short title that summarizes the content of the material.
 - **Education Level** (in English from the provided list): The educational level that the material is intended for.
