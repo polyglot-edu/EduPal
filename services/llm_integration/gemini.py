@@ -35,7 +35,7 @@ class GeminiLLM(LLMInterface):
             input_prompt += f"\nPrevious Messages:\n{history}"
         input_prompt += f"\nrole:user\ncontent:{prompt}\nrole: assistant\ncontent:"
 
-        print(f"Input Prompt: {input_prompt}. \n")
+        #print(f"Input Prompt: {input_prompt}. \n")
 
         try:
             response = self.client.models.generate_content(
@@ -81,7 +81,7 @@ class GeminiLLM(LLMInterface):
             input_prompt += f"\nPrevious Messages:\n{history}"
         input_prompt += f"\nrole:user\ncontent:{prompt}\nrole: assistant\ncontent:"
 
-        print(f"Input Prompt: {input_prompt}. \n")
+        #print(f"Input Prompt: {input_prompt}. \n")
 
         try:
             response = self.client.models.generate_content(

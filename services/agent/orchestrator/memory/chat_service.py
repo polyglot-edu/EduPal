@@ -225,7 +225,7 @@ async def update_chat_history(user_collection, chat_id: str, messages: List[Mess
    
 async def send_message(message: Message, recent_messages: List[Message], memory: Memory, personal_info: PersonalInfo, model: str="GEMINI")-> List[Message]:
     """
-    Send a message to the chat document
+    Send a message to the chat
     """
     try:
         recent_messages_str = "\n".join([msg.to_str() for msg in recent_messages])

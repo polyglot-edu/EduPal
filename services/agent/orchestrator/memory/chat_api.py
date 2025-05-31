@@ -307,6 +307,9 @@ async def send_message_to_chat(chat_id: str, message: Message = Body(...), token
     username, _ , _ = await validate_token(db, token, SECRET_KEY, ALGORITHM)
     recent_messages, memory = await get_chat_history(db[username], chat_id)
     personal_info = await get_personal_info(db[username])
+
+    # Update message timestamp to current time
+    message.timestamp = datetime.now(tz=timezone.utc)
     # Send the message to the LLM and get the response
     response = await send_message(message, recent_messages, memory, personal_info, model)
     # Add the messages to the chat document

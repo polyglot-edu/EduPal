@@ -38,9 +38,6 @@ async def analyse_material( request: AnalyseMaterialRequest, access_key: str = H
     try: 
         authenticate(access_key)
 
-        if len(request.text) < 200:
-            raise HTTPException(status_code=400, detail="Text must be at least 200 characters.")
-        
         result = analysis(request)
 
     except Exception as e:

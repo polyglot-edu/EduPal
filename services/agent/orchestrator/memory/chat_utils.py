@@ -7,6 +7,7 @@ from services.auth.auth_utils import PersonalInfo
 
 #--------------------------------------------------------------------------------------------------------------------------
 class Resource(BaseModel):
+    id: ObjectId
     title: str
     description: str
 
@@ -15,6 +16,9 @@ class Resource(BaseModel):
             f"title: {self.title}",
             f"description: {self.description}"
         ])
+    
+    class Config:
+        arbitrary_types_allowed = True
 
 class Message(BaseModel):
     role: str

@@ -1,6 +1,7 @@
 from bson import ObjectId
 from pydantic import BaseModel, Field
 from typing import List, Optional
+from typing import TypedDict, List
 from ..memory.chat_utils import PersonalInfo, Memory, Message
 
 class PerfectedRequest(BaseModel):
@@ -79,4 +80,14 @@ Grounding: Assess your confidence in relying only on your knowledge to fulfill t
 """
     return prompt
 
+def get_tools() -> List[str]:
+    """
+    Returns a list of available tools for the LLM to use.
+    """
+    # Placeholder for the actual implementation
+    return [
+        "Tool1: Description of Tool1",
+        "Tool2: Description of Tool2",
+        "Tool3: Description of Tool3"
+    ]
   

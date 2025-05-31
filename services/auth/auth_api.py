@@ -50,9 +50,17 @@ async def signup(request: UserCreateRequest = Body(...), access_key: str = Heade
                 detail="Username already exists"
             )
 
-        # Create personal info with just the role
-        personal_info = PersonalInfo(role=request.role)
-
+        new_role = "student"  # Default role if not provided
+        if request.role:
+            new_role = request.role
+        personal_info = PersonalInfo(
+            role=new_role,
+            name=None,
+            age=None,
+            location=None,
+            interests=None,
+            education_level=None
+        )
         # Create the full profile document with defaults
         user_profile = UserProfileDocument(
             personal_info=personal_info,
@@ -76,7 +84,7 @@ async def signup(request: UserCreateRequest = Body(...), access_key: str = Heade
             "username": username,
             "password": hashed_password,
             "password_salt": salt.hex(),
-            "role": request.role
+            "role": new_role
         })
 
         if (not result.inserted_id or not users_result.inserted_id) and username is not None:
