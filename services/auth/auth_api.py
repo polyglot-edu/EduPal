@@ -6,7 +6,7 @@ from motor.motor_asyncio import AsyncIOMotorClient
 
 from common.auth import authenticate_user as authenticate
 from .auth_utils import UserCreateRequest, User, Token, PersonalInfo, UserProfileDocument, UserPreferences
-from .auth_service import get_password_hash, authenticate_user, create_access_token, validate_token, get_profile
+from .auth_service import create_search_index, get_password_hash, authenticate_user, create_access_token, validate_token, get_profile
 
 # Constants
 SECRET_KEY = os.getenv("USERS_SECRET_KEY", "")
@@ -95,6 +95,9 @@ async def signup(request: UserCreateRequest = Body(...), access_key: str = Heade
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Failed to create user profile"
             )
+        
+        await create_search_index(collection_name=username, database_name=db.name)
+
         user = User(
             id=str(users_result.inserted_id),
             username=request.username

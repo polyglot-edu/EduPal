@@ -59,6 +59,41 @@ Here are the available **Learning Outcome** options:
 """
    return prompt
 
+def analyse_image_prompt():
+   prompt = f"""You are an educational AI specialized in analyzing and explaining images in detail.
+
+Given the following image, perform a deep analysis and describe it thoroughly.
+
+Your description must include:
+
+A clear and structured description of the visual elements (objects, people, animals, places, colors, textures, actions, etc.).
+
+Relevant historical, cultural, scientific, or technical facts connected to what is visible in the image.
+
+Interesting trivia or lesser-known educational facts that would help a student learn more about the subject of the image.
+
+Explanation of potential educational value (e.g., what could be taught using this image in subjects like history, biology, art, geography, technology, etc.).
+
+Use technical, engaging, and informative language.
+The output should be structured into these sections:
+
+1. Visual Description:
+[Detailed description of what's in the image]
+
+2. Related Educational Facts:
+[Facts linked to objects, animals, people, or places in the image — historical, scientific, cultural, etc.]
+
+3. Trivia & Fun Facts:
+[Any surprising or interesting pieces of knowledge that add educational value]
+
+4. Suggested Educational Uses:
+[Suggestions on how this image could be integrated in lessons]
+
+Start the analysis now.
+"""
+   return prompt
+
+
 """Test text:
 {
   "text": "L'Europa è uno dei sette continenti del mondo, situata interamente nell'emisfero settentrionale. È delimitata a nord dal Mar Glaciale Artico, a sud dal Mar Mediterraneo, a ovest dall'Oceano Atlantico e a est dai Monti Urali e dal fiume Ural, che la separano dall'Asia. Nonostante le sue dimensioni relativamente ridotte rispetto ad altri continenti, l'Europa ha una grande varietà di paesaggi: dalle pianure del nord alle Alpi e ai Pirenei, fino ai Balcani e ai Carpazi. \n I fiumi principali includono il Danubio, che attraversa dieci paesi, e il Reno, importante per il trasporto e il commercio. L’Europa ha anche molte isole e penisole, come la penisola iberica, italiana e balcanica, e isole come la Gran Bretagna e l’Islanda. \n Il clima varia da oceanico a continentale, fino a quello mediterraneo, influenzando la vegetazione, l’agricoltura e lo stile di vita delle popolazioni. La diversità geografica ha avuto un ruolo fondamentale nello sviluppo culturale e storico del continente.",

@@ -9,7 +9,7 @@ def translate(text, language="English", model=None):
     else:
         llm = GeminiLLM()
     try:
-        response = llm.generate_json(prompt=translate_prompt(text, language), response_model=TranslateResponse)
+        response = llm.generate_text(prompt=translate_prompt(text, language), response_model=TranslateResponse)
         
     except Exception as e:
         print(f"Error during translation: {e}")

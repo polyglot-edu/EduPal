@@ -18,7 +18,7 @@ def lesson_plan(request: PlanLessonRequest):
     else:
         llm = GeminiLLM()
     try:
-        response: PlanLessonResponse = llm.generate_json(prompt=plan_lesson_prompt(request), response_model=PlanLessonResponse)
+        response: PlanLessonResponse = llm.generate_text(prompt=plan_lesson_prompt(request), response_model=PlanLessonResponse)
         
         final = LessonPlan(
             title=request.title,

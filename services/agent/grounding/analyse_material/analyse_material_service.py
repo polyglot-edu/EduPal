@@ -1,18 +1,18 @@
+from PIL.Image import Image
 from google import genai
 from dotenv import load_dotenv
-from .analyse_material_utils import AnalyseMaterialRequest, AnalyseMaterialResponse, Analysis, analyse_material_prompt, EducationLevel, LearningOutcome, Topic
+from .analyse_material_utils import AnalyseMaterialRequest, AnalyseMaterialResponse, Analysis, analyse_material_prompt, analyse_image_prompt, Topic
 from ....llm_integration.gemini import GeminiLLM
 import os
 from typing import List
-from pydantic import BaseModel
-import re
 from urllib.parse import urlparse, urlunparse, parse_qs
+import re
+from langchain_core.documents import Document
 
 # File Handling Libraries
-import os
 from pathlib import Path
 import pdfplumber
-from docx import Document
+# from docx import Document as DocxDocument
 from pptx import Presentation
 
 # OCR Libraries
@@ -45,7 +45,7 @@ def is_youtube_url(url: str) -> bool:
         if parsed.netloc in ["www.youtube.com", "youtube.com", "youtu.be"]:
             return True
         return False
-    except Exception:
+    except:
         return False
 
 def clean_youtube_url(url: str) -> str:
@@ -106,7 +106,7 @@ def get_youtube_captions(url: str, preferred_lang: str = "en") -> str:
             vtt_text = f.read()
         # Remove VTT formatting
         text = re.sub(r"(\d{2}:\d{2}:\d{2}\.\d{3} --> .*)", "", vtt_text)
-        text = re.sub(r"WEBVTT.*", "", text)
+        text = re.sub(r"WEBVTT.*", "", vtt_text)
         text = re.sub(r"\n+", "\n", text)
         text = text.strip()
         # Optionally, delete the file after reading
@@ -231,12 +231,13 @@ def ocr_pdf_page(page_image) -> str:
         print(f"OCR failed for page: {str(e)}")
         return ""
 
-def read_pdf_file(file_path: str) -> str:
+def read_pdf_file(file_path: str) -> List[Document]:
     """
     Reads content from a PDF file using pdfplumber.
     Uses OCR for pages with less than 10 characters of selectable text.
+    Returns a list of Documents, one per page.
     """
-    text = ""
+    documents = []
     pages_needing_ocr = []
 
     try:
@@ -252,9 +253,9 @@ def read_pdf_file(file_path: str) -> str:
                 # If page has less than 10 characters, mark for OCR
                 if len(page_text.strip()) < 10:
                     pages_needing_ocr.append(page_num)
-                    text += f"[Page {page_num + 1} - OCR processing needed]\n"
+                    documents.append(Document(page_content=f"[Page {page_num + 1} - OCR processing needed]", metadata={"page": page_num + 1}))  # Placeholder
                 else:
-                    text += page_text + "\n"
+                    documents.append(Document(page_content=page_text, metadata={"page": page_num + 1}))
 
             print(f"Pages needing OCR: {pages_needing_ocr}")  # Debug
 
@@ -269,49 +270,67 @@ def read_pdf_file(file_path: str) -> str:
                         ocr_text = ocr_pdf_page(images[page_num])
 
                         # Replace the placeholder with actual OCR text
-                        placeholder = f"[Page {page_num + 1} - OCR processing needed]\n"
-                        text = text.replace(placeholder, f"[Page {page_num + 1} - OCR]\n{ocr_text}\n")
+                        for i, doc in enumerate(documents):
+                            if doc.metadata.get("page") == page_num + 1 and "[Page" in doc.page_content:
+                                documents[i] = Document(page_content=f"[Page {page_num + 1} - OCR]\n{ocr_text}", metadata={"page": page_num + 1})
+                                break
 
             # Debug: Print final extracted text
-            print(f"Final extracted text (first 500 chars): {text[:100]}")
+            print(f"Final extracted text (first 500 chars): {documents[0].page_content[:100] if documents else 'No Documents'}")
 
     except Exception as e:
         raise ValueError(f"Failed to read PDF file: {str(e)}")
 
-    return text
+    return documents
 
-def read_docx_file(file_path: str) -> str:
+def read_docx_file(file_path: str) -> List[Document]:
     """Reads content from a DOCX file."""
     doc = Document(file_path)
-    text = '\n'.join([paragraph.text for paragraph in doc.paragraphs])
-    return text
+    documents = [Document(page_content=paragraph.text, metadata={"page": i + 1}) for i, paragraph in enumerate(doc.paragraphs)]
+    return documents
 
-def read_pptx_file(file_path: str) -> str:
+def read_pptx_file(file_path: str) -> List[Document]:
     """Reads content from a PPTX file."""
     prs = Presentation(file_path)
-    text = ""
+    documents = []
+    slide_num = 1
     for slide in prs.slides:
+        slide_text = ""
         for shape in slide.shapes:
             if hasattr(shape, "text"):
-                text += shape.text + "\n"
-    return text
+                slide_text += shape.text + "\n"
+        documents.append(Document(page_content=slide_text, metadata={"page": slide_num}))
+        slide_num += 1
+    return documents
 
-def get_text_from_source(text: str) -> str:
+def analyse_image_with_llm(image: Image) -> str:
+    """
+    Uses an LLM to analyze the image and extract text.
+    This is a placeholder function; actual implementation may vary.
+    """
+    # Call the LLM with a prompt to analyze the image
+    llm = GeminiLLM()
+    prompt = analyse_image_prompt()
+    response = llm.generate_text(prompt=prompt, image=image)
+    return response
+
+def get_text_from_source(text: str) -> List[Document]:
     """
     Determines if the input 'text' is a file path, URL, YouTube URL, or direct text content.
-    Extracts and returns the appropriate text content.
+    Extracts and returns the appropriate text content as a list of Document objects.
     """
     # Check if it's a YouTube URL
     if is_youtube_url(text):
         print(f"Detected YouTube URL: {text}")
         captions = get_youtube_captions(text)
         print(captions[:500])
-        return captions
+        return [Document(page_content=captions, metadata={"source": "youtube"})]
 
     # Check if it's a regular URL
     if is_url(text):
         print(f"Detected URL: {text}")
-        return extract_web_content(text)
+        content = extract_web_content(text)
+        return [Document(page_content=content, metadata={"source": "webpage"})]
 
     # Check if it's a file path
     file_path = Path(text)
@@ -319,7 +338,8 @@ def get_text_from_source(text: str) -> str:
         file_extension = file_path.suffix.lower()
         if file_extension == ".txt":
             print(f"Detected text file: {text}")
-            return read_text_file(text)
+            content = read_text_file(text)
+            return [Document(page_content=content, metadata={"source": "text_file"})]
         elif file_extension == ".pdf":
             print(f"Detected PDF file: {text}")
             return read_pdf_file(text)
@@ -329,13 +349,37 @@ def get_text_from_source(text: str) -> str:
         elif file_extension == ".pptx":
             print(f"Detected PPTX file: {text}")
             return read_pptx_file(text)
+        elif file_extension in [".jpg", ".jpeg", ".png"]:
+            print(f"Detected image file: {text}")
+            # Perform OCR on the image file
+            try:
+                image = Image.open(text)
+                ocr_text = pytesseract.image_to_string(image)
+                if ocr_text.len(ocr_text.strip()) < 40:
+                    image_text = analyse_image_with_llm(image)
+                    if image_text:
+                        ocr_text = image_text
+                    else:
+                        raise ValueError("Image cannot be read.")
+                return [Document(page_content=ocr_text, metadata={"source": "image_file"})]
+            except Exception as e:
+                raise ValueError(f"Failed to perform OCR on image file: {str(e)}")
         else:
             raise ValueError(f"Unsupported file type: {file_extension}")
     else:
         # It's direct text content
         print("Detected direct text content.")
-        return text
-    
+        return [Document(page_content=text, metadata={"source": "direct_text"})]
+
+def extract_plain_text_from_documents(documents: List[Document]) -> str:
+    """
+    Extracts the plain text content from a list of Document objects and concatenates it into a single string.
+    """
+    plain_text = ""
+    for doc in documents:
+        plain_text += doc.page_content + "\n"  # Add a newline between documents
+    return plain_text.strip()  # Remove any trailing whitespace
+
 def chunk_text(text: str, chunk_size: int = 400000) -> List[str]:
     """
     Splits text into chunks of approximately 'chunk_size' characters (≈100k tokens).
@@ -389,7 +433,8 @@ def analysis(request: AnalyseMaterialRequest) -> Analysis:
 
     try:
         # 1. Get text content from source (file, URL, or direct text)
-        text = get_text_from_source(request.text)
+        documents = get_text_from_source(request.text)
+        text = extract_plain_text_from_documents(documents)
 
         # 2. Chunk the text
         chunks = chunk_text(text)
@@ -399,7 +444,8 @@ def analysis(request: AnalyseMaterialRequest) -> Analysis:
         for i, chunk in enumerate(chunks):
             print(f"Processing chunk {i + 1}/{len(chunks)}...")
             prompt = analyse_material_prompt(AnalyseMaterialRequest(text=chunk, model=request.model))
-            response: AnalyseMaterialResponse = llm.generate_json(prompt=prompt, response_model=AnalyseMaterialResponse)
+            response: AnalyseMaterialResponse = llm.generate_text(prompt=prompt, response_model=AnalyseMaterialResponse)
+            print(f"Chunk {i + 1} response: {response}")
             responses.append(response)
 
         # 4. Merge the responses
@@ -419,7 +465,7 @@ def analysis(request: AnalyseMaterialRequest) -> Analysis:
         )
 
     except Exception as e:
-        raise
+        raise ValueError(f"Error during analysis: {str(e)}")
 
     return final
 

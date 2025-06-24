@@ -11,3 +11,4 @@ __pycache__/
 /source/_build
 /Controllers
 /Models
+/temp_files

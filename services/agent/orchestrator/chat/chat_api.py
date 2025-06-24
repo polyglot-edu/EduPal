@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Body, Header
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status, Body, Header
 from fastapi.security import OAuth2PasswordBearer
 from datetime import datetime, timezone
 from typing import List, Dict, Optional
@@ -8,12 +8,16 @@ from bson import ObjectId
 import os
 from motor.motor_asyncio import AsyncIOMotorClient
 
+from services.agent.grounding.analyse_material.analyse_material_utils import AnalyseMaterialRequest, Analysis
+from .upload_service import upload
+from services.agent.grounding.analyse_material.analyse_material_utils import AnalyseMaterialRequest
 
-from .chat_utils import ChatDocumentSimplified, ChatDocument, FactItem, Message, Memory, ChatCreateRequest
-from .chat_service import get_chat_history, update_chat_history, send_message
-from services.auth.auth_service import get_personal_info
-from services.auth.auth_service import validate_token
+from .chat_utils import STUDENT_SYSTEM_INSTRUCTIONS, ChatDocumentSimplified, ChatDocument, Resource, ResourceDocumentSimplified, ResourceIdsRequest, SendMessageRequest, Message, Memory, ChatCreateRequest, State, UpdateChatRequest
+from .chat_service import delete_resources_by_ids, get_chat_info, get_chat_resources, get_complete_resources_by_ids, get_user_resources, update_chat_info, send_message
+from services.auth.auth_service import get_personal_info, validate_token
 from common.auth import authenticate_chat as authenticate
+
+USER_DATABASE_NAME = "user_data"
 
 # Constants
 SECRET_KEY = os.getenv("USERS_SECRET_KEY", "")
@@ -60,9 +64,22 @@ async def chatlist(
 
         # Retrieve chat documents from the user's collection
         user_collection = db[username]
-        cursor = user_collection.find({"document_type": "chat"})
+        cursor = user_collection.find(
+            {"document_type": "chat"},
+            {
+                "_id": 1,
+                "chat_name": 1,
+                "created_at": 1,
+                "updated_at": 1
+            }
+        )
         # Convert cursor to list
         chat_documents = await cursor.to_list(length=None)  # None means no limit
+
+        # Convert id to string for serialization
+        for doc in chat_documents:
+            if "_id" in doc:
+                doc["_id"] = str(doc["_id"])
 
         # Convert documents to ChatDocumentSimplified objects
         chat_list = [ChatDocumentSimplified(**doc) for doc in chat_documents]
@@ -80,6 +97,46 @@ async def chatlist(
             detail=f"An error occurred: {str(e)}"
         )
     
+@router.get("/resourcelist", response_model=list[ResourceDocumentSimplified])
+async def resourcelist(
+    token: str = Header(..., alias="token"),
+    access_key: str = Header(..., alias="access_key")
+):
+    """
+    Retrieve a list of resource documents for the current user
+
+    Parameters:
+    - token: JWT token in headers (key: "token")
+    - access_key: Access key in headers (key: "access_key")
+
+    Returns:
+    - List of Resource objects
+    """
+    try:
+        # Authenticate access key
+        authenticate(access_key)
+
+        # Validate token and get username
+        username, _, _ = await validate_token(db, token, SECRET_KEY, ALGORITHM)
+
+        # Retrieve chat documents from the user's collection
+        user_collection = db[username]
+        
+        resource_list = await get_user_resources(user_collection)
+
+        return resource_list
+
+    except ValueError as ve:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(ve)
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"An error occurred: {str(e)}"
+        )
+
 @router.get("/chat/{chat_id}", response_model=ChatDocument)
 async def chat(
     chat_id: str,
@@ -125,14 +182,14 @@ async def chat(
         
         # Explicitly construct the Memory object first
         memory_data = chat_document.get('memory', {})
-        memory = Memory(
-            key_insights=memory_data.get('key_insights', []),
-            important_facts=[FactItem(**fact) for fact in memory_data.get('important_facts', [])],
-            summary=memory_data.get('summary', '')
-        )
+        memory = Memory(**memory_data) if memory_data else Memory()
 
         # Update the chat_document with the properly constructed Memory object
         chat_document['memory'] = memory
+
+        # Convert ObjectId to string for serialization
+        if "_id" in chat_document:
+            chat_document["_id"] = str(chat_document["_id"])
 
         return ChatDocument(**chat_document)
 
@@ -146,7 +203,138 @@ async def chat(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"An error occurred: {str(e)}"
         )
-    
+
+@router.get("/chat/{chat_id}/resources", response_model=list[ResourceDocumentSimplified])
+async def chat_resources(
+    chat_id: str,
+    token: str = Header(..., alias="token"),
+    access_key: str = Header(..., alias="access_key")
+):
+    """
+    Retrieve all resource documents (simplified) associated with a specific chat.
+
+    Parameters:
+    - chat_id: ID of the chat document (in URL path)
+    - token: JWT token in headers (key: "token")
+    - access_key: Access key in headers (key: "access_key")
+
+    Returns:
+    - List of ResourceDocumentSimplified objects (only 'updated_at' and 'analisys' fields)
+    """
+    try:
+        # Authenticate access key
+        authenticate(access_key)
+
+        # Validate token and get username
+        username, _, _ = await validate_token(db, token, SECRET_KEY, ALGORITHM)
+
+        user_collection = db[username]
+
+        resource_list = await get_chat_resources(user_collection, chat_id)
+
+        return resource_list
+
+    except ValueError as ve:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(ve)
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"An error occurred: {str(e)}"
+        )
+  
+@router.post("/resources/by-ids", response_model=List[Resource])
+async def get_resources_by_ids(
+    request: ResourceIdsRequest,
+    token: str = Header(..., alias="token"),
+    access_key: str = Header(..., alias="access_key")
+):
+    """
+    Retrieve full resource documents by their IDs.
+
+    Parameters:
+    - request: JSON body containing 'resource_ids' (list of resource IDs)
+    - token: JWT token in headers (key: "token")
+    - access_key: Access key in headers (key: "access_key")
+
+    Returns:
+    - List of full Resource objects
+    """
+    try:
+        # Authenticate access key
+        authenticate(access_key)
+
+        # Validate token and get username
+        username, _, _ = await validate_token(db, token, SECRET_KEY, ALGORITHM)
+
+        user_collection = db[username]
+
+        resource_ids = request.resource_ids
+        if not resource_ids:
+            return []  # No IDs provided
+
+        resource_list = await get_complete_resources_by_ids(user_collection, resource_ids)
+
+        return resource_list
+
+    except ValueError as ve:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(ve)
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"An error occurred: {str(e)}"
+        )
+
+@router.post("/delete-resources/by-ids", response_model=int)
+async def del_resources_by_ids(
+    request: ResourceIdsRequest,
+    token: str = Header(..., alias="token"),
+    access_key: str = Header(..., alias="access_key")
+):
+    """
+    Delete resource documents by their IDs.
+
+    Parameters:
+    - request: JSON body containing 'resource_ids' (list of resource IDs)
+    - token: JWT token in headers (key: "token")
+    - access_key: Access key in headers (key: "access_key")
+
+    Returns:
+    - List of full Resource objects
+    """
+    try:
+        # Authenticate access key
+        authenticate(access_key)
+
+        # Validate token and get username
+        username, _, _ = await validate_token(db, token, SECRET_KEY, ALGORITHM)
+
+        user_collection = db[username]
+
+        resource_ids = request.resource_ids
+        if not resource_ids:
+            return []  # No IDs provided
+
+        deleted_count = await delete_resources_by_ids(user_collection, resource_ids)
+
+        return deleted_count
+
+    except ValueError as ve:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(ve)
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"An error occurred: {str(e)}"
+        )
+
 @router.get("/chat/{chat_id}/history", response_model=Dict)
 async def get_history(
     chat_id: str,
@@ -175,12 +363,12 @@ async def get_history(
         # Retrieve personal information from the user's collection
         user_collection = db[username]
 
-        recent_messages, memory = await get_chat_history(user_collection, chat_id)
+        memory, state  = await get_chat_info(user_collection, chat_id)
         personal_info = await get_personal_info(user_collection)
         return {
-            "recent_messages": recent_messages,
             "memory": memory,
-            "personal_info": personal_info
+            "state": state,
+            "personal_info": personal_info if personal_info else None,
         }
 
     except ValueError as ve:
@@ -229,12 +417,21 @@ async def create_chat(
             updated_at=datetime.now(tz=timezone.utc),
             recent_messages=[],
             messages=[],
-            memory=Memory()
+            memory=Memory(),
+            state=State(),
+            resources=[]
         )
 
         # Insert the document
-        print(chat_document.model_dump(by_alias=True))
-        result = await user_collection.insert_one(chat_document.model_dump(by_alias=True))
+        chat_doc_dict = chat_document.model_dump(by_alias=True)
+
+        # Remove _id if it's None
+        if chat_doc_dict.get("_id") is None:
+            del chat_doc_dict["_id"]
+
+        print(chat_doc_dict)
+
+        result = await user_collection.insert_one(chat_doc_dict)
 
         if not result.inserted_id:
             raise HTTPException(
@@ -287,7 +484,16 @@ async def update_chat_name(chat_id: str, chat_name: str = Body(...), token: str 
             detail="Chat document not found or no changes made"
         )
     updated_chat_document = await user_collection.find_one({"_id": ObjectId(chat_id)})
+    # Convert ObjectId to string for serialization
+    if updated_chat_document is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Chat document not found"
+        )
+    if "_id" in updated_chat_document:
+        updated_chat_document["_id"] = str(updated_chat_document["_id"])
     return ChatDocumentSimplified(**updated_chat_document)
+
 
 @router.post("/chat/{chat_id}", response_model=List[Message])
 async def send_message_to_chat(chat_id: str, message: Message = Body(...), token: str = Header(..., alias="token"), access_key: str = Header(..., alias="access_key"), model: str =  Header("gemini", alias="model")):
@@ -303,26 +509,109 @@ async def send_message_to_chat(chat_id: str, message: Message = Body(...), token
     """
     # Authenticate access key
     authenticate(access_key)
+    # check if message content is empty or "string"
+    if not message.content or message.content.strip() == "" or message.content == "string":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Message content cannot be empty"
+        )
+
     # Get the current user's username
     username, _ , _ = await validate_token(db, token, SECRET_KEY, ALGORITHM)
-    recent_messages, memory = await get_chat_history(db[username], chat_id)
+    g_memory, g_state = await get_chat_info(db[username], chat_id)
     personal_info = await get_personal_info(db[username])
+    # if the user is a sutudent, add some custom instruction to make the system behave like a tutor
+    if personal_info.role == "student":
+        message.system_instructions += STUDENT_SYSTEM_INSTRUCTIONS
+    send_message_request = SendMessageRequest(
+        chat_id=chat_id,
+        message=message,
+        memory=g_memory,
+        state=g_state,
+        personal_info=personal_info if personal_info else None,
+        model=model
+    )
 
-    # Update message timestamp to current time
-    message.timestamp = datetime.now(tz=timezone.utc)
     # Send the message to the LLM and get the response
-    response = await send_message(message, recent_messages, memory, personal_info, model)
+    new_messages, next_state = await send_message(send_message_request, user_collection=db[username])
+    print("-"*50,"\n")
+    print("Message sent to LLM, response received")
+    print("\n","-"*50)
     # Add the messages to the chat document
     user_collection = db[username]
-    print(response)
-    result = await update_chat_history(user_collection, chat_id, response, model)
-    if result: return response
+    update_chat_request = UpdateChatRequest(
+        messages=new_messages, # Include the user message and all LLM messages
+        state=next_state,
+        model=model
+    )
+    
+    result = await update_chat_info(user_collection, chat_id, update_chat_request)
+    print("Chat document updated with new messages")
+    if result: return new_messages
     else:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Chat document not found or error in updating messages"
-        )
+        )    
 
+@router.post("/chat/{chat_id}/upload", response_model=str)
+async def upload_file( chat_id: str, file: Optional[UploadFile] = File(None), url: Optional[str] = Form(None), model: str = Form(...),
+    token: str = Header(..., alias="token"),
+    access_key: str = Header(..., alias="access_key")
+):
+    """
+    Upload a file (by path) and perform semantic chunking.
+
+    - **file**: The path of the file to upload
+    - **db_name**: Database name
+    """
+    try: 
+        authenticate(access_key)
+
+        # check if there is at least one of the two parameters (file or url)
+        if not file and not url:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Either file or url must be provided"
+            )
+
+        # MongoDB connection - using async client
+        client = AsyncIOMotorClient(MONGO_URI)
+        db = client[USER_DATABASE_NAME]
+        
+        # Validate token and get username
+        username, _, _ = await validate_token(db, token, SECRET_KEY, ALGORITHM)
+        # Get user's personal collection
+        collection = db[username]
+
+        # Check existence of the chat document
+        count = await collection.count_documents({"_id": ObjectId(chat_id)}, limit=1)
+        if count == 0:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Chat document not found"
+            )
+
+        resource_id = await upload(collection, model, file, url)
+
+        # Update the chat document with the new resource ID
+        update_result = await collection.update_one(
+            {"_id": ObjectId(chat_id)},
+            {"$push": {"resources": resource_id}, "$set": {"updated_at": datetime.now(tz=timezone.utc)}}
+        )
+        if update_result.modified_count == 0:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Chat document not found or no changes made"
+            )
+
+        return resource_id
+    
+    except Exception as e:
+        if hasattr(e, "status_code"):
+            raise HTTPException(status_code=e.status_code, detail=str(e))
+        else:
+            raise RuntimeError(f"Unexpected error: {e}")
 
 
 

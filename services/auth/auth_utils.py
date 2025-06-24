@@ -6,6 +6,8 @@ from typing import Optional
 from datetime import datetime, timezone
 from bson import ObjectId
 
+from services.agent.utils.common_enums import EducationLevel
+
 # Models
 class UserCreateRequest(BaseModel):
     username: str
@@ -54,7 +56,7 @@ class UserPreferences(BaseModel):
     email: str = ""
 
 class PersonalInfo(BaseModel):
-    role: str
+    role: str # either "student", "teacher", or "admin"
     name: Optional[str]
     age: Optional[int]
     location: Optional[str]
@@ -64,6 +66,15 @@ class PersonalInfo(BaseModel):
     def to_str(self) -> str:
         return "\n".join([f"{k}: {v}" for k, v in self.model_dump().items()
                          if v is not None and v != [] and v != ""])
+    
+    def toString() -> str:
+        return f"""- role: user's role (always keep the same as the existing StructuredMemory)
+- name: user's name
+- age: user's age
+- location: user's location
+- occupation: user's occupation
+- interests: user's interests
+- educational_level: user's educational level (only possible levels are: {EducationLevel.toString()})"""
 
 class UserProfileDocument(BaseModel):
     document_type: str = "profile"

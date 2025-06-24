@@ -5,6 +5,54 @@ from passlib.context import CryptContext
 from datetime import datetime, timedelta
 import jwt
 from .auth_utils import TokenData, JWTBearer, PersonalInfo, UserProfileDocument
+import httpx
+import os
+
+ATLAS_PROJECT_ID = os.getenv("ATLAS_PROJECT_ID")
+ATLAS_CLUSTER_NAME = os.getenv("ATLAS_CLUSTER_NAME")
+ATLAS_PUBLIC_KEY = os.getenv("ATLAS_PUBLIC_KEY")
+ATLAS_PRIVATE_KEY = os.getenv("ATLAS_PRIVATE_KEY")
+
+async def create_search_index(collection_name: str, database_name: str):
+    url = f"https://cloud.mongodb.com/api/atlas/v1.0/groups/{ATLAS_PROJECT_ID}/clusters/{ATLAS_CLUSTER_NAME}/fts/indexes"
+
+    auth = httpx.DigestAuth(ATLAS_PUBLIC_KEY, ATLAS_PRIVATE_KEY)
+
+    # Define the index body for the embedding vector index
+    index_body = {
+        "collectionName": collection_name,
+        "database": database_name,
+        "name": "embedding_vector_index",
+        "mappings": {
+            "dynamic": False,
+            "fields": {
+                "content": {
+                    "type": "document",
+                    "fields": {
+                        "embedding": {
+                            "type": "knnVector",
+                            "dimensions": 768,
+                            "similarity": "cosine"
+                        },
+                        "text": {
+                            "type": "string"
+                        },
+                        "metadata": {
+                            "type": "document"
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+
+    async with httpx.AsyncClient(auth=auth) as client:
+        response = await client.post(url, json=index_body)
+        if response.status_code not in (200, 201):
+            raise Exception(f"Failed to create search index: {response.status_code} {response.text}")
+        return response.json()
+
 
 # Password context for hashing
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")

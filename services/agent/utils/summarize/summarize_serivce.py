@@ -18,7 +18,7 @@ def summary(text, model=None, style=TextStyle.STANDARD, education_level=Educatio
     else:
         llm = GeminiLLM()
     try:
-        response = llm.generate_json(prompt=summarize_prompt(text, style, education_level, learning_outcome), response_model=SummarizeResponse)
+        response = llm.generate_text(prompt=summarize_prompt(text, style, education_level, learning_outcome), response_model=SummarizeResponse)
     except Exception as e:
         print(f"Error during summarization: {e}")
         raise

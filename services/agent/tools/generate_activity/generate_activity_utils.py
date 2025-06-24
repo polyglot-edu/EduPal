@@ -12,6 +12,7 @@ class ActivityUtils(BaseModel):
 class GenerateActivityRequest(BaseModel):
     macro_subject: str
     topic: str
+    topic_explanation: str
     education_level: EducationLevel
     learning_outcome: LearningOutcome
     material: str
@@ -32,6 +33,7 @@ class GenerateActivityResponse(BaseModel):
 class Activity(BaseModel):
     macro_subject: str
     topic: str
+    topic_explanation: str
     education_level: EducationLevel
     learning_outcome: LearningOutcome
     material: str
@@ -50,7 +52,7 @@ def generate_activity_prompt(request: GenerateActivityRequest):
 Your expertise lies in creating **structured, engaging, and pedagogically sound activities (including exercises, projects and in-class activities)**. 
 
 ### Task
-Your task is to generate an {request.type.value} for the topic: **'{request.topic}'**, ensuring it aligns with best teaching practices for a **{request.education_level.value}** audience.  
+Your task is to generate an {request.type.value} for the topic: **'{request.topic}** - {request.topic_explanation}', ensuring it aligns with best teaching practices for a **{request.education_level.value}** audience.  
 The **main goal** is to {activity_utils.goal} **'{request.learning_outcome.value}'** on the topic.
 
 ### Activity Structure
@@ -103,8 +105,8 @@ def get_activity_utils(activity_type: TypeOfActivity, solutions_number: int, dis
         TypeOfActivity.TRUE_OR_FALSE: (
             "assess if the audience achieved ",
             "The statement or question to be evaluated as true or false",
-            f"(list of one element) The correct answer. Either 'true' or 'false,' + an explanation of why the statement is false",
-            f"A list of {distractors_number} common misconceptions that may lead the audience to evaluate the statement or question incorrectly",
+            f"A list of {solutions_number} statement or question that are true about the topic. OR 'false.' Followed by a short sentence that tells why the statement is false",
+            f"A list of {distractors_number} statement or question that are false about the topic. After each statement, write the reason why it is false. Separate the reason from the statement with a new line",
             "here write 'empty'; this field is not used for this type of activity",
         ),
         TypeOfActivity.SHORT_ANSWER_QUESTION: (

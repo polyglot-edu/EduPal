@@ -1,7 +1,7 @@
 from pydantic import BaseModel
 from pydantic import BaseModel
 from typing import List
-from ...utils.common_enums import EducationLevel, LearningObjectives
+from services.agent.utils.common_enums import EducationLevel, LearningObjectives
 
 class Section(BaseModel):
     macro_topic: str
@@ -58,6 +58,7 @@ Each **Section** consists of:
 Now that you know how the lesson will be, list the key **prerequisites** (in {request.language}) your audience should already be familiar with (keep it concise).  
 """
    return prompt
+
 
 """Test text:
 {

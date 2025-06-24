@@ -18,6 +18,9 @@ class EducationLevel(Enum):
     GRADUATE = "graduate"
     PROFESSIONAL = "professional"
 
+    def toString()-> str:
+        return "'elementary school', 'middle school', 'high school', 'college', 'graduate', 'professional'"
+
 class LearningOutcome(Enum):
     DECLARATIVE = "the ability to recall or recognize simple facts and definitions"
     UNDERSTANDING = "the ability to explain concepts and principles, and recognize how different ideas are related"

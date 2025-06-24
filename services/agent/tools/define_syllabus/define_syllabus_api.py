@@ -56,3 +56,4 @@ async def define_syllabus( request: DefineSyllabusRequest, access_key: str = Hea
 
 def include_router(app: FastAPI):
     app.include_router(router)
+

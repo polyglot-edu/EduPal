@@ -21,13 +21,14 @@ def activity(request: GenerateActivityRequest):
         #print("Prompt: ",generate_activity_prompt(request))
         #print("-"*100)
         #print("\n\n\n")
-        response: GenerateActivityResponse = llm.generate_json(prompt=generate_activity_prompt(request), response_model=GenerateActivityResponse)
+        response: GenerateActivityResponse = llm.generate_text(prompt=generate_activity_prompt(request), response_model=GenerateActivityResponse)
         print("Response",response)
         print("-"*100)
 
         final = Activity(
             macro_subject=request.macro_subject,
             topic=request.topic,
+            topic_explanation=request.topic_explanation,
             education_level=request.education_level,
             learning_outcome=request.learning_outcome,
             material=request.material,

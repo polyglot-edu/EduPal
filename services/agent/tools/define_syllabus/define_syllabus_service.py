@@ -18,7 +18,7 @@ def syllabus(request: DefineSyllabusRequest):
     else:
         llm = GeminiLLM()
     try:
-        response: DefineSyllabusResponse = llm.generate_json(prompt=define_syllabus_prompt(request), response_model=DefineSyllabusResponse)
+        response: DefineSyllabusResponse = llm.generate_text(prompt=define_syllabus_prompt(request), response_model=DefineSyllabusResponse)
         #print("Response",response)
         #print("-"*50)
 

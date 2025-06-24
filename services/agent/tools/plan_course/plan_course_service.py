@@ -18,7 +18,7 @@ def course_plan(request: PlanCourseRequest):
     else:
         llm = GeminiLLM()
     try:
-        response: PlanCourseResponse = llm.generate_json(prompt=plan_course_prompt(request), response_model=PlanCourseResponse)
+        response: PlanCourseResponse = llm.generate_text(prompt=plan_course_prompt(request), response_model=PlanCourseResponse)
         #print("Response",response)
         #print("-"*50)
 

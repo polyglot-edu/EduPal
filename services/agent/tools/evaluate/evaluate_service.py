@@ -21,7 +21,7 @@ def evaluation(request: EvaluateRequest):
         #print("Prompt: ",evaluate_prompt(request))
         #print("-"*100)
         #print("\n\n\n")
-        response: EvaluateResponse = llm.generate_json(prompt=evaluate_prompt(request), response_model=EvaluateResponse)
+        response: EvaluateResponse = llm.generate_text(prompt=evaluate_prompt(request), response_model=EvaluateResponse)
         print("Response",response)
         print("-"*100)
 

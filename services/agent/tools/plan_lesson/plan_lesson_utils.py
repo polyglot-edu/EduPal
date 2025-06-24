@@ -6,6 +6,7 @@ from typing import List
 class Node(BaseModel):
     type: TypeOfActivity
     topic: str
+    explanation: str
     details: str
     learning_outcome: LearningOutcome
     duration: int
@@ -15,7 +16,7 @@ class Topic(BaseModel):
     explanation: str
 
     def __str__(self):
-        return f"{self.topic} - {self.explanation}."
+        return f"Topic:{self.topic} Explanation: {self.explanation}."
 
 class PlanLessonResponse(BaseModel):
     nodes: List[Node]
@@ -55,12 +56,13 @@ Since you are highly organized, you will structure the lesson as a **logical seq
 Each **node** consists of:  
 - **TypeOfActivity** (in English, from the provided options): choose an appropriate **TypeOfActivity** from the list below, balancing between content delivery and more interactive activities.  
 - **Topic** (in {request.language}): Select from the provided list.
+- **Explanation** (in {request.language}): The brief explanation that pairs with the topic.
 - **Details** (in {request.language}): Suggest a tailored approach for this audience.  
 - **Learning Outcome** (in English, from the provided options): The desired learning outcome for this specific node. Note that not all the nodes will be about an equally important topic, so balance the learning outcomes accordingly.
 - **Duration**: The minimum time (in minutes) needed for this node.
 
 ### Provided Resources
-Here are the **topics** to be covered:
+Here are the **topics** to be covered and their **explanations**:
 {"\n".join(str(topic) for topic in request.topics)}
 
 Here are the available **TypeOfActivity** options:

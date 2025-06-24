@@ -1,23 +1,9 @@
 from fastapi import APIRouter, FastAPI, HTTPException, Header
-from pydantic import BaseModel
-from typing import List
-from .vector_search_service import query_documents
-from common.auth import authenticate
 import os
 
-class QueryRequest(BaseModel):
-    query: str
-    uri: str = None
-    db_name: str = None
-    collection_name: str = None
-
-class QueryResult(BaseModel):
-    page: int  # Page number extracted from metadata
-    content: str  # Extracted page content
-
-class QueryResponse(BaseModel):
-    result: str
-    search_results: List[QueryResult]  # List of results with metadata and content
+from services.agent.grounding.vector_search_retrieval.vector_search_utils import QueryRequest, QueryResponse, QueryResult
+from .vector_search_service import query_OERs
+from common.auth import authenticate
 
 router = APIRouter(
     prefix="/vector-search",
@@ -54,7 +40,7 @@ async def query_vector_search(request: QueryRequest, access_key: str = Header(..
             request.db_name = "edu_db"
             request.collection_name = "materials"
 
-        results = query_documents(request.query, request.uri, request.db_name, request.collection_name)
+        results = query_OERs(request.query, request.uri, request.db_name, request.collection_name)
         # Extract structured data: page number and content
         extracted_results = [
             QueryResult(

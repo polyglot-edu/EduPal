@@ -5,27 +5,20 @@ from PIL import Image
 from pydantic import BaseModel
 
 class LLMInterface(ABC):
+
     @abstractmethod
     def generate_text(
         self,
         prompt: str,
+        response_model: Optional[Type[BaseModel]] = None,
         context: Optional[str] = "",
         history: Optional[str] = "",
         options: Optional[Dict] = None,
         user_info: Optional[str] = "",
-    ) -> str:
-        pass
-
-    @abstractmethod
-    def generate_json(
-        self,
-        prompt: str,
-        response_model: Type[BaseModel],
-        context: Optional[str] = "",
-        history: Optional[str] = "",
-        options: Optional[Dict] = None,
-        user_info: Optional[str] = "",
-    ) -> BaseModel:
+        instructions: Optional[str] = "",
+        tools: Optional[List[str]] = None,
+        image: Optional[Image.Image] = None,
+    ) -> BaseModel | str:
         pass
 
     @abstractmethod

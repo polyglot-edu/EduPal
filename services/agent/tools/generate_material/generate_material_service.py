@@ -21,7 +21,7 @@ def material(request: GenerateMaterialRequest):
         #print("Prompt: ",generate_material_prompt(request))
         #print("-"*100)
         #print("\n\n\n")
-        response: GenerateMaterialResponse = llm.generate_json(prompt=generate_material_prompt(request), response_model=GenerateMaterialResponse)
+        response: GenerateMaterialResponse = llm.generate_text(prompt=generate_material_prompt(request), response_model=GenerateMaterialResponse)
         #print("Response",response)
         #print("-"*100)
 

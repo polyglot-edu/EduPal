@@ -2,16 +2,16 @@
 from fastapi import FastAPI
 import importlib
 from dotenv import load_dotenv
-from  services.auth.auth_api import router as auth_router  # Import the router from auth_api.py
-from services.agent.orchestrator.memory.chat_api import router as chat_router
+from services.auth.auth_api import router as auth_router  # Import the router from auth_api.py
+from services.agent.orchestrator.chat.chat_api import router as chat_router
+from services.database_management.OERs_api import router as OERs_router
+from services.agent.grounding.vector_search_retrieval.vector_search_api import router as vector_search_router
+from services.agent.grounding.analyse_material.analyse_material_api import router as analyse_material_router
 
 load_dotenv()
 
 # List of service modules (you can automate this discovery)
 services = [
-    "services.agent.grounding.upload.upload_api",
-    "services.agent.grounding.vector_search_retrieval.vector_search_api",
-    "services.agent.grounding.analyse_material.analyse_material_api",
     "services.agent.utils.summarize.summarize_api",
     "services.agent.utils.translate.translate_api",
     "services.agent.tools.plan_lesson.plan_lesson_api",
@@ -33,6 +33,9 @@ app = FastAPI(
 # Include the authentication router
 app.include_router(chat_router)
 app.include_router(auth_router)
+app.include_router(OERs_router)
+app.include_router(vector_search_router)
+app.include_router(analyse_material_router)
 print(f"Successfully loaded API routes from auth and chatbot modules")
 
 # Root endpoint
