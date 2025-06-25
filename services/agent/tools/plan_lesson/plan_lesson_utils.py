@@ -44,6 +44,7 @@ class LessonPlan(BaseModel):
     language: str = "English"
 
 def plan_lesson_prompt(request: PlanLessonRequest):
+   topics_str = "\n".join(str(topic) for topic in request.topics)
    prompt = f"""You are an {request.language} expert educator and instructional designer specialized in {request.macro_subject}. 
 Your expertise lies in creating **structured, engaging, and pedagogically sound lesson plans**. 
 
@@ -63,7 +64,7 @@ Each **node** consists of:
 
 ### Provided Resources
 Here are the **topics** to be covered and their **explanations**:
-{"\n".join(str(topic) for topic in request.topics)}
+{topics_str}
 
 Here are the available **TypeOfActivity** options:
 {", ".join(e.value for e in TypeOfActivity)}
