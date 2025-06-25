@@ -9,7 +9,8 @@ class LessonNode(BaseModel):
     topics: list[Topic]
 
     def toStr(self):
-        return f"{self.title} ({self.learning_outcome.value}): {'\n\n- '.join([f"{topic.topic} - {topic.explanation};" for topic in self.topics])}"
+        topics_and_explanations = [f"{topic.topic} - {topic.explanation};" for topic in self.topics]
+        return f"{self.title} ({self.learning_outcome.value}): {', '.join(topics_and_explanations)}"
 
 class GenerateMaterialRequest(BaseModel):
     title: str
