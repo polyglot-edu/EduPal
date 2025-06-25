@@ -136,16 +136,35 @@ Determine if you have ALL the necessary information to complete the task from:
 - You may ONLY ask the user if the missing information concerns personal preferences, opinions, or goals that are NOT discoverable via grounding.
 
 Confidence (0-100):
-Set your confidence level for completing this task *without external grounding or tools*:
-- Must be **0** if any required info is time-sensitive, resource-dependent, or needs grounding.
-- Must be **0** if tools are required but you lack parameters.
-- Must be **0** if grounding could provide missing facts.
-- Otherwise, reflect true confidence in answering from internal knowledge only.
+    Assess your ability to fulfill the user's request using:
+        1. Your internal knowledge.
+        2. The provided context, including:
+            - The user's message,
+            - The state object (which may include grounded or externally retrieved information),
+
+    Rules:
+        - If the task depends on recent, time-sensitive, or factual information:
+            - Check if the required data is **already present** in the context or state.
+            - If it is present and sufficient, provide a non-zero confidence score.
+            - Check if the user is referring to specific uploaded resources (you should understand this from the message, if the user is referring to something either specifically or vaguely)
+            - If you need to ground on user resources, OERs database or web search, set Confidence to **0**.
+            - If it's missing or incomplete, set Confidence to **0**.
+            - If tool usage is needed but any required parameters are missing, set Confidence to **0**.
+            - If the user's request requires personal preferences or goals and they are missing, Confidence may be above 0 **only** if this does not affect task completion.
+        - If the user is referring to something specific and they recently uploded something, consider that they might want to use that specific resource.
+        - Otherwise, give a realistic confidence score based on what is already known or provided.
+
+    Reminder: Do **not** assume grounding is needed again if time-sensitive or factual info is already present in the state or context. Analyze before deciding.
+
+    Important:
+    - If the task depends on time-sensitive or external data, check if the relevant and up-to-date information has **already been grounded** in the provided context or state.
+    - Only set Confidence to **0** if the required info is **not already included** in the provided grounding.
+    - If the information is available in the state (e.g. web search results, database grounding), and it answers the user's query sufficiently, Confidence should reflect that.
 
 ConfidenceReasoning:
 Briefly justify your confidence score (in {request.language}).
-- Explicitly state if and why grounding is required.
-- Clearly mention time sensitivity, specificity, or lack of internal knowledge.
+- Explicitly say whether any grounded info already addresses the user's request.
+- Explain why no further grounding is needed or why it is needed (if applicable).
 
 Grounding:
 - IF your Confidence < {CONFIDENCE_THRESHOLD}, you MUST select the most appropriate grounding source from: {GroundingSteps.to_str()}.

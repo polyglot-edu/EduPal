@@ -13,9 +13,9 @@ from .chat_utils import Resource, ResourceDocumentSimplified, SendMessageRequest
 from services.auth.auth_service import get_personal_info
 
 # Constants
-STM_LENGTH = 296  # "Min" number of tokens for STM memory
+STM_LENGTH = 4000  # "Min" number of tokens for STM memory
 LTM_LENGTH = 12207  # "Max" number of tokens for LTM memory
-MAX_STEPS = 1  # Maximum number of steps to perform in the grounding process
+MAX_STEPS = 3  # Maximum number of steps to perform in the grounding process
 
 async def get_memory(user_collection, chat_id: str)-> Memory:
     """
@@ -411,9 +411,9 @@ async def send_message(request: SendMessageRequest, user_collection: AsyncIOMoto
         #print(f"Personal info: {request.personal_info if request.personal_info else 'None'}")
         #print(f"Current intent: {request.state.goal_state.current_intent},\n Current models: {request.state.grounding_state.models}")
 
-        resources = ""
+        resources_message = ""
         if request.message.resources is not None and request.message.resources.__len__() > 0:
-            resources = f"\n-The user just uploaded some resources. You should 'proceed' if you need to ground the response on those resources."
+            resources_message = f"\n-The user just uploaded some resources. You should 'proceed' if you need to ground the response on those resources."
             
         sys_instructions = ""
         if request.message.system_instructions is not None:
@@ -433,10 +433,11 @@ async def send_message(request: SendMessageRequest, user_collection: AsyncIOMoto
         print("-"*50)
 
         if planning_response.validity != "True":
-            response_message = f"Reasoning:\n{planning_response.reasoning}\n\nResponse:\n{planning_response.validity}"
+            response_message = planning_response.validity
             assistant_message = Message(
                 role="assistant",
-                content=response_message
+                content=response_message,
+                system_instructions=planning_response.reasoning
             )
             messages.append(assistant_message)
             return messages, request.state
@@ -446,10 +447,11 @@ async def send_message(request: SendMessageRequest, user_collection: AsyncIOMoto
             return messages, request.state
         
         elif planning_response.answer == "Proceed":
-            response_message = f"Reasoning:\n{planning_response.reasoning}\nPlan:\n{planning_response.goal_state.next_steps[1:]}\n\nProceeding with '{planning_response.goal_state.next_steps[0]}'."
+            response_message = "\n".join(planning_response.goal_state.next_steps)
             assistant_message = Message(
                 role="planner",
-                content=response_message
+                content=response_message,
+                system_instructions=planning_response.reasoning
             )
             messages.append(assistant_message)
 
@@ -467,12 +469,17 @@ async def send_message(request: SendMessageRequest, user_collection: AsyncIOMoto
             # Perform current task
             while steps < MAX_STEPS and confidence <CONFIDENCE_THRESHOLD:
                 steps += 1
+                print("-"*50)
+                print(f"Grounded info:\n")
                 print(request_analysis_reviewed.state.grounding_state.grounded_info)
+                print("\n"*3)
                 print(request_analysis_reviewed.state.grounding_state.last_grounding_step)
+                print("-"*50)
 
                 # fill in the prompt template and call the LLM
                 s_prompt = step_analysis_prompt(request=request_analysis_reviewed)
-                s_prompt = s_prompt + sys_instructions + resources
+                s_prompt = s_prompt + sys_instructions + resources_message
+                print("\nResources message:", resources_message,"\n")
                 #print(f"Step analysis prompt: {s_prompt}")
                 #print("-"*50)
                 grounding_response: GorundedResponse = llm.generate_text(
@@ -491,20 +498,23 @@ async def send_message(request: SendMessageRequest, user_collection: AsyncIOMoto
                 
                 # If needed, ask a follow-up question 
                 if grounding_response.follow_up != "None":
-                    message_content = f"Reasoning:\n{grounding_response.reasoning}\n\nResponse:\n{grounding_response.follow_up}"
+                    message_content = grounding_response.follow_up
                     follow_up_message = Message(
                         role="assistant",
-                        content=message_content
+                        content=message_content,
+                        system_instructions=grounding_response.reasoning
                     )
                     messages.append(follow_up_message)
                     return messages, request_analysis_reviewed.state
                 
                 # If the confidence is above the threshold, return the response
                 if grounding_response.confidence >= CONFIDENCE_THRESHOLD:
-                    response_message = f"Reasoning:\n{grounding_response.reasoning}\n\nResponse:\n{grounding_response.answer}"
+                    print(f"Confidence reached: {grounding_response.confidence}")
+                    response_message = grounding_response.answer
                     assistant_message = Message(
                         role="grounding",
-                        content=response_message
+                        content=response_message,
+                        system_instructions=grounding_response.reasoning
                     )
                     messages.append(assistant_message)
 
@@ -533,10 +543,11 @@ async def send_message(request: SendMessageRequest, user_collection: AsyncIOMoto
                         )
                     print(f"Refining response: {refining_response}")
                     print("-"*50)
-                    response_message = f"Reasoning:\n{refining_response.reasoning}\n\nResponse:\n{refining_response.refined_answer}"
+                    response_message = refining_response.refined_answer
                     assistant_message = Message(
                         role="assistant",
-                        content=response_message
+                        content=response_message,
+                        system_instructions=refining_response.reasoning
                     )
                     messages.append(assistant_message)
 
@@ -544,7 +555,8 @@ async def send_message(request: SendMessageRequest, user_collection: AsyncIOMoto
                 
                 # If the confidence is below the threshold, perform grounding to gather more information
                 elif grounding_response.confidence < CONFIDENCE_THRESHOLD:
-                    grounded_information = await ground_response(
+                    print(f"Confidence not reached: {grounding_response.confidence}")
+                    grounded_information: str = await ground_response(
                         user_collection, 
                         request.chat_id,
                         grounding_response.grounding,
@@ -554,14 +566,16 @@ async def send_message(request: SendMessageRequest, user_collection: AsyncIOMoto
                         planning_response.goal_state.to_str(),
                         grounding_response.reasoning,
                         request.model)
+                    print(f"Grounded information: {grounded_information}")
                     request_analysis_reviewed.state.grounding_state.grounded_info = grounded_information
                     request_analysis_reviewed.state.grounding_state.last_grounding_step = grounding_response.grounding.value
                 
             # If the confidence is below the threshold and no more grounding can be done, return what you have so far
-            response_message = f"Reasoning:\n{grounding_response.reasoning}\n\nResponse:\n{grounding_response.answer}\n\nConfidence: {grounding_response.confidence}"
+            response_message = grounding_response.answer
             assistant_message = Message(
                 role="assistant",
-                content=response_message
+                content=response_message,
+                system_instructions=f"{grounding_response.reasoning}\n\nConfidence: {grounding_response.confidence}%"
             )
             messages.append(assistant_message)
 
@@ -579,19 +593,21 @@ async def send_message(request: SendMessageRequest, user_collection: AsyncIOMoto
                 )
             print(f"Refining response: {refining_response}")
             print("-"*50)
-            response_message = f"Reasoning:\n{refining_response.reasoning}\n\nResponse:\n{refining_response.refined_answer}"
+            response_message = refining_response.refined_answer
             assistant_message = Message(
                 role="assistant",
-                content=response_message
+                content=response_message,
+                system_instructions=refining_response.reasoning
             )
             messages.append(assistant_message)
             return messages, request_analysis_reviewed.state
 
         else: # This is the case where the response is a follow-up message to the user or a direct response
-            response_message = f"Reasoning:\n{planning_response.reasoning}\n\nResponse:\n{planning_response.answer}"
+            response_message = planning_response.answer
             assistant_message = Message(
                 role="assistant",
-                content=response_message
+                content=response_message,
+                system_instructions=planning_response.reasoning
             )
             messages.append(assistant_message)
             # Update the state

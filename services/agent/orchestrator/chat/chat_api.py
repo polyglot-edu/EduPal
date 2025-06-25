@@ -515,6 +515,8 @@ async def send_message_to_chat(chat_id: str, message: Message = Body(...), token
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Message content cannot be empty"
         )
+    if message.system_instructions is None:
+        message.system_instructions = ""
 
     # Get the current user's username
     username, _ , _ = await validate_token(db, token, SECRET_KEY, ALGORITHM)
@@ -537,6 +539,7 @@ async def send_message_to_chat(chat_id: str, message: Message = Body(...), token
     print("-"*50,"\n")
     print("Message sent to LLM, response received")
     print("\n","-"*50)
+
     # Add the messages to the chat document
     user_collection = db[username]
     update_chat_request = UpdateChatRequest(
