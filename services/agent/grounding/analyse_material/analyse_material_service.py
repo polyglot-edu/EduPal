@@ -333,43 +333,44 @@ def get_text_from_source(text: str) -> List[Document]:
         return [Document(page_content=content, metadata={"source": "webpage"})]
 
     # Check if it's a file path
-    file_path = Path(text)
-    if file_path.exists():
-        file_extension = file_path.suffix.lower()
-        if file_extension == ".txt":
-            print(f"Detected text file: {text}")
-            content = read_text_file(text)
-            return [Document(page_content=content, metadata={"source": "text_file"})]
-        elif file_extension == ".pdf":
-            print(f"Detected PDF file: {text}")
-            return read_pdf_file(text)
-        elif file_extension == ".docx":
-            print(f"Detected DOCX file: {text}")
-            return read_docx_file(text)
-        elif file_extension == ".pptx":
-            print(f"Detected PPTX file: {text}")
-            return read_pptx_file(text)
-        elif file_extension in [".jpg", ".jpeg", ".png"]:
-            print(f"Detected image file: {text}")
-            # Perform OCR on the image file
-            try:
-                image = Image.open(text)
-                ocr_text = pytesseract.image_to_string(image)
-                if ocr_text.len(ocr_text.strip()) < 40:
-                    image_text = analyse_image_with_llm(image)
-                    if image_text:
-                        ocr_text = image_text
-                    else:
-                        raise ValueError("Image cannot be read.")
-                return [Document(page_content=ocr_text, metadata={"source": "image_file"})]
-            except Exception as e:
-                raise ValueError(f"Failed to perform OCR on image file: {str(e)}")
-        else:
-            raise ValueError(f"Unsupported file type: {file_extension}")
-    else:
-        # It's direct text content
-        print("Detected direct text content.")
-        return [Document(page_content=text, metadata={"source": "direct_text"})]
+    if len(text) < 4000: 
+        file_path = Path(text)
+        if file_path.exists():
+            file_extension = file_path.suffix.lower()
+            if file_extension == ".txt":
+                print(f"Detected text file: {text}")
+                content = read_text_file(text)
+                return [Document(page_content=content, metadata={"source": "text_file"})]
+            elif file_extension == ".pdf":
+                print(f"Detected PDF file: {text}")
+                return read_pdf_file(text)
+            elif file_extension == ".docx":
+                print(f"Detected DOCX file: {text}")
+                return read_docx_file(text)
+            elif file_extension == ".pptx":
+                print(f"Detected PPTX file: {text}")
+                return read_pptx_file(text)
+            elif file_extension in [".jpg", ".jpeg", ".png"]:
+                print(f"Detected image file: {text}")
+                # Perform OCR on the image file
+                try:
+                    image = Image.open(text)
+                    ocr_text = pytesseract.image_to_string(image)
+                    if ocr_text.len(ocr_text.strip()) < 40:
+                        image_text = analyse_image_with_llm(image)
+                        if image_text:
+                            ocr_text = image_text
+                        else:
+                            raise ValueError("Image cannot be read.")
+                    return [Document(page_content=ocr_text, metadata={"source": "image_file"})]
+                except Exception as e:
+                    raise ValueError(f"Failed to perform OCR on image file: {str(e)}")
+            else:
+                raise ValueError(f"Unsupported file type: {file_extension}")
+    
+    # It's direct text content
+    print("Detected direct text content.")
+    return [Document(page_content=text, metadata={"source": "direct_text"})]
 
 def extract_plain_text_from_documents(documents: List[Document]) -> str:
     """
