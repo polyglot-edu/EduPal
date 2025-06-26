@@ -1,5 +1,6 @@
 # main.py in the root directory
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 import importlib
 from dotenv import load_dotenv
 from services.auth.auth_api import router as auth_router  # Import the router from auth_api.py
@@ -28,6 +29,15 @@ app = FastAPI(
     description="APIs for E4E services",
     version="0.1.0",
     security=[{"bearerAuth": []}],
+)
+
+# CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 # Include the authentication router
