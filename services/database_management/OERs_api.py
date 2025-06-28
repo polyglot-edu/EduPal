@@ -241,13 +241,13 @@ async def get_oers_collections(access_key: str = Header(..., alias="access_key")
 
 @router.post("/get-oers/", response_model=List[ResourceDocumentSimplified], 
     summary="Retrieve OERs from a Collection",
-    description="""Get Open Educational Resources (OERs) from a specific MongoDB collection using various filters such as title, description (vector search), and educational level.
+    description="""Get Open Educational Resources (OERs) from a specific MongoDB collection using various filters such as title, description (vector search), and education level.
 
 ### Request Body (Filters):
 - **collection_name** (str, required): Name of the MongoDB collection to search in.
 - **title** (str, optional): Exact or partial title of the resource. If provided, the API will attempt exact and regex matches on the 'analisys.title' field.
 - **description** (str, optional): A text string to run a vector-based semantic search. Returns resources semantically similar to the description.
-- **educational_level** (str, optional): Education level to filter the results (e.g., "primary", "secondary", "higher").
+- **education_level** (str, optional): Education level to filter the results (e.g., "primary", "secondary", "higher").
 
 ### Header Parameters:
 - **access_key** (str, required): API access key for authentication.
@@ -255,7 +255,7 @@ async def get_oers_collections(access_key: str = Header(..., alias="access_key")
 ### Behavior:
 1. If `title` is provided, performs exact and partial (regex) title search.
 2. If `description` is provided, performs vector similarity search (requires the vector search backend).
-3. If `educational_level` is provided, filters resources by this field.
+3. If `education_level` is provided, filters resources by this field.
 4. If no filters match, returns all documents in the specified collection.
 
 ### Responses:
@@ -266,7 +266,7 @@ async def get_oers_collections(access_key: str = Header(..., alias="access_key")
 """)
 async def get_oers_by_collection(filters: Filters = Body(...), access_key: str = Header(..., alias="access_key")) -> List[ResourceDocumentSimplified]:
     """
-    Get OERs from a specific collection based on title, description (vector search placeholder), and educational level.
+    Get OERs from a specific collection based on title, description (vector search placeholder), and education level.
     """
     try:
         print("Authenticating access key...")
@@ -384,23 +384,23 @@ async def get_oers_by_collection(filters: Filters = Body(...), access_key: str =
             print(f"Converted resource list: {resource_list}")
 
             if resource_list:
-                if filters.educational_level and filters.educational_level.value != "":
-                    print(f"Filtering vector results by educational level: {filters.educational_level.value}")
+                if filters.education_level and filters.education_level.value != "":
+                    print(f"Filtering vector results by education level: {filters.education_level.value}")
                     final_resources = [
                         doc for doc in resource_list
-                        if doc.analysis and doc.analysis.education_level == filters.educational_level.value
+                        if doc.analysis and doc.analysis.education_level == filters.education_level.value
                     ]
-                    print(f"Resources after educational level filter: {final_resources}")
+                    print(f"Resources after education level filter: {final_resources}")
                     resource_list = final_resources
 
                 print("Returning vector search results.")
                 return resource_list
 
-        # 3. Only Educational Level Filter (if no description or no vector results)
-        if filters.educational_level and filters.educational_level.value != "":
-            print(f"Educational level filter provided: {filters.educational_level.value}")
+        # 3. Only Education Level Filter (if no description or no vector results)
+        if filters.education_level and filters.education_level.value != "":
+            print(f"Education level filter provided: {filters.education_level.value}")
             level_filtered_docs = await collection.find({
-                "analysis.education_level": filters.educational_level.value
+                "analysis.education_level": filters.education_level.value
                 },
                 {
                     "_id": 1,
@@ -410,16 +410,16 @@ async def get_oers_by_collection(filters: Filters = Body(...), access_key: str =
                 }
             ).to_list(length=None)
 
-            print(f"Documents matching educational level: {level_filtered_docs}")
+            print(f"Documents matching education level: {level_filtered_docs}")
 
             if level_filtered_docs:
                 for doc in level_filtered_docs:
                     doc["_id"] = str(doc["_id"])
-                print("Returning educational level filtered documents.")
+                print("Returning education level filtered documents.")
                 return [ResourceDocumentSimplified(**doc) for doc in level_filtered_docs]
             else:
-                print("No documents found matching the educational level filter.")
-                raise HTTPException(status_code=404, detail="No documents found matching the educational level filter.")
+                print("No documents found matching the education level filter.")
+                raise HTTPException(status_code=404, detail="No documents found matching the education level filter.")
 
         # 4. If no specific filters matched, return everything
         print("No filters matched. Returning all documents in the collection.")

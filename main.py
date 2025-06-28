@@ -2,6 +2,10 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import importlib
+import asyncio
+import threading
+from contextlib import asynccontextmanager
+from mcp_server import run_mcp_server
 from dotenv import load_dotenv
 from services.auth.auth_api import router as auth_router  # Import the router from auth_api.py
 from services.agent.orchestrator.chat.chat_api import router as chat_router
@@ -23,12 +27,25 @@ services = [
     "services.agent.tools.define_syllabus.define_syllabus_api",
 ]
 
-# Create FastAPI app
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Manage startup and shutdown events."""
+    # Start MCP server in a background thread
+    def start_mcp():
+        asyncio.run(run_mcp_server())
+
+    thread = threading.Thread(target=start_mcp, daemon=True)
+    thread.start()
+    
+    yield  # This marks the point where the app is ready to handle requests
+
+# Create FastAPI app with the lifespan context manager
 app = FastAPI(
     title="EduPal APIs",
     description="APIs for E4E services",
     version="0.1.0",
     security=[{"bearerAuth": []}],
+    lifespan=lifespan,
 )
 
 # CORS middleware

@@ -21,7 +21,7 @@ class Filters(BaseModel):
     collection_name: str
     title: Optional[str] = None
     description: Optional[str] = None
-    educational_level: Optional[EducationLevel] = None
+    education_level: Optional[EducationLevel] = None
 
 class GetResourceRequest(BaseModel):
     collection_name: str

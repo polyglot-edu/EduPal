@@ -1,11 +1,12 @@
 from datetime import datetime
+import json
 from pydantic import BaseModel
 from typing import List, Optional
 from typing import List
 
+from mcp_server import get_tool_overviews, format_tool_overviews, list_tools, format_full_tools
 from services.auth.auth_utils import PersonalInfo
 from ..chat.chat_utils import GoalState, SendMessageRequest, State, Message
-from services.agent.tools.tools_manager import get_tools, get_tools_short
 from enum import Enum
 
 CONFIDENCE_THRESHOLD = 75
@@ -36,6 +37,8 @@ def planner_prompt(request: SendMessageRequest) -> str:
 
     sys_instructions = (f"\nSystemInstructions:{request.message.system_instructions}"
                         if request.message.system_instructions else "")
+    
+    tolls = get_tool_overviews()
 
     prompt = f"""Role:
 You are an educator assistant, expert in logical reasoning and minimalistic planning. 
@@ -54,7 +57,7 @@ User Info: {request.personal_info.to_str()}
 {state}
 User Query: {request.message.content}
 
-Available Tools: {get_tools_short()}
+Available Tools: {format_tool_overviews(tolls)}
 
 Tasks Output Format:
 Language: State the chat language.
@@ -71,25 +74,29 @@ Reasoning: Briefly explain your planning choices and how they serve the final go
 Answer:
 - If the intent is clear and you have enough data to answer immediately, provide the direct answer (in user language).
 - If the intent is unclear or ambiguous, ask a specific clarifying question (in user language).
-- If complex actions, grounding, or further decomposition are necessary, write "Proceed" to delegate to the next step.
+- If complex actions, grounding, or further decomposition are necessary, write exclusively the word "Proceed" in this field to delegate to the next step.
 - If the chat is ending, thank the user politely or write "None" if no output is needed.
 
 Notes: {resources}
 
 - Be polite and respectful.
+- If you think the intent has change, feel free to modify the plan to fit the user's intent.
 - Small talk or casual conversation is valid intent — respond appropriately without overplanning.
 {sys_instructions}
 """
     return prompt
 
+
+#---------------------------------------------Grounding---------------------------------------------
+
 class GroundingSteps(Enum):
+    CHAT_HISTORY = "chat history, default grounding step"  # Step for chat history grounding
     USER_RESOURCES = "user resources (a set of resources uploaded by the user. Useful when the user wants to work with proprietary, private, or specific content.)"  # Step for user resources grounding
     OERS = "Open Educational Resources database (a set of curated, reliable, and designed resources for educational use. Useful when the user requires delicate and non temporal dependent factual knowledge and/or user resources are not sufficient.) "  # Step for Open Educational Resources grounding
     WEB_SEARCH = "web search (general web search. Useful when the user requires general factual knowledge / time dependent information and/or user resources and OERs are not sufficient)"  # Step for web search grounding
-    #CHAT_HISTORY = "chat history"  # Step for chat history grounding
-
+    
     def to_str():
-        return f"{GroundingSteps.USER_RESOURCES.value}, {GroundingSteps.OERS.value}, {GroundingSteps.WEB_SEARCH.value}"
+        return f"{GroundingSteps.CHAT_HISTORY.value}, {GroundingSteps.USER_RESOURCES.value}, {GroundingSteps.OERS.value}, {GroundingSteps.WEB_SEARCH.value}"
 
 class RequestAnalysisReviewed(BaseModel):
     language: str # Language of the chat
@@ -102,16 +109,15 @@ class GorundedResponse(BaseModel):
     reasoning: str  # Reasoning for the confidence assessment
     grounding: GroundingSteps  # Grounding step to perform
     answer: str # The answer to the user query if the confidence is above a certain threshold
-    tool_name: str  # Name of the tool to be used, if applicable
-    tool_parameters: str  # Parameters for the tool, if applicable
+    tool_call: str  # JSON string (escaped) with format: {"tool_name": string, "parameters": dict} or "None"
 
-
-#---------------------------------------------Grounding---------------------------------------------
-
-def step_analysis_prompt(request: RequestAnalysisReviewed) -> str:
+async def step_analysis_prompt(request: RequestAnalysisReviewed) -> str:
     """
     Generates a prompt for the LLM to answer a request or require further grounding
     """
+    tools_list = await list_tools()
+
+    tools = format_full_tools(tools_list)
 
     prompt = f"""Role:
 You are an expert educator and assistant designed to complete user requests efficiently and correctly.
@@ -122,7 +128,7 @@ Today's Date: {datetime.now().strftime("%Y-%m-%d")}
 User Language: {request.language}
 {request.state.to_str()}
 User Message: {request.message}
-Available Tools: {get_tools()}
+Available Tools: {tools}
 
 Tasks Output Format:
 
@@ -134,6 +140,7 @@ Determine if you have ALL the necessary information to complete the task from:
 
 - If any missing information CAN be retrieved via resources or grounding (web or database), write "None" — do NOT ask the user.
 - You may ONLY ask the user if the missing information concerns personal preferences, opinions, or goals that are NOT discoverable via grounding.
+- If you really need to ask the user, write your questions as you're talking directly to the user.
 
 Confidence (0-100):
     Assess your ability to fulfill the user's request using:
@@ -168,23 +175,43 @@ Briefly justify your confidence score (in {request.language}).
 
 Grounding:
 - IF your Confidence < {CONFIDENCE_THRESHOLD}, you MUST select the most appropriate grounding source from: {GroundingSteps.to_str()}.
-- Otherwise, write "None".
+- Otherwise, default to User Resources.
 
 Answer:
 - IF Grounding is required, write high-quality compelling queries (in {request.language}) for semantic or web search — no explanations.
 - If Confidence >= {CONFIDENCE_THRESHOLD}, provide the complete final answer here.
 - If using a tool, explain why and how the tool and its parameters are selected (only if all parameters are known).
 
-ToolName:
-Specify the exact tool name from Available Tools — or "None".
+ToolCall (JSON schema):
+    JSON string (escaped) with format: {{\\"tool_name\\": string, \\"parameters\\": dict}} or "None"
 
-Tool Parameters:
-Provide tool parameters in JSON — or "None" if no tool is needed.
+    If you are using a tool:
+    {{
+    \\"tool_name\\": \\"tool_name_here\\",
+    \\"parameters\\": {{
+        \\"param1\\": \\"value1\\",
+        \\"param2\\": \\"sub-param2.1\\": \\"value2.1\\"
+                      \\"sub-param2.2\\": \\"value2.2\\"
+                      \\"sub-param2.3\\": \\"value2.3\\"
+        \\"param3\\": \\"value3\\"
+        ...
+    }}
+    }}
+
+    If you are not using a tool:
+    {{
+    \\"tool_name\\": \\"None\\",
+    \\"parameters\\": \\"None\\"
+    }}
+
+    No text after or below the JSON block.
+    The JSON **MUST** match the required structure for the tool, including **nested objects**, arrays, and enums.
 
 Notes:
 - Grounding MUST precede user clarification if factual data or uploaded resources can supply the required information.
 - You may only ask the user for subjective, personal, or preference-based details — never for data retrievable by grounding.
 - Always remain polite and clear.
+- Always use a tool when needed, as tools are more efficient and effective, and **WRITE CORRECTLY NESTED OBJECTS!** like learning objectives
 """
     return prompt
 
@@ -261,8 +288,6 @@ Reasoning: explain (in {request.language}) the reasoning behind your choice of q
 Notes: 
 Generate semantic search queries that are atomic and minimal. Queries must be phrased to capture what needs to be retrieved, not general aspects a document might be about overall. Generate only necessary queries."""
     return prompt
-
-
 
 def web_grounding_prompt(request: UserGroundingRequest) -> str:
     """
