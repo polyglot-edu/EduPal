@@ -536,7 +536,7 @@ async def send_message(request: SendMessageRequest, user_collection: AsyncIOMoto
                             tool_response: list[TextContent] = await call_tool(tool_name, tool_params)
                             print("-"*50,"\nTool response:", tool_response,"\n", "-"*50)
                             tool_text = tool_response[0].text if tool_response else "No response"
-                            if tool_text is not None:
+                            if tool_text is not None and isinstance(tool_response, TextContent):
                                 # Update the state
                                 request_analysis_reviewed.state.grounding_state.models.append(tool_text)
                                 tool_message = Message(

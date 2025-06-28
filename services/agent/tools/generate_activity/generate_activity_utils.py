@@ -104,9 +104,9 @@ def get_activity_utils(activity_type: TypeOfActivity, solutions_number: int, dis
         # QUESTION
         TypeOfActivity.TRUE_OR_FALSE: (
             "assess if the audience achieved ",
-            "The statement or question to be evaluated as true or false",
-            f"A list of {solutions_number} statement or question that are true about the topic. OR 'false.' Followed by a short sentence that tells why the statement is false",
-            f"A list of {distractors_number} statement or question that are false about the topic. After each statement, write the reason why it is false. Separate the reason from the statement with a new line",
+            "General knowledge about the topic that is usefult to correct the exercise",
+            f"A list of {solutions_number} true statement or question that are true about the topic",
+            f"A list of {distractors_number} false statement or question that are false about the topic. After each statement, write the reason why it is false. Separate the reason from the statement with a new line",
             "here write 'empty'; this field is not used for this type of activity",
         ),
         TypeOfActivity.SHORT_ANSWER_QUESTION: (
