@@ -1,5 +1,5 @@
 import asyncio
-from services.agent.tools.tools_manager import define_syllabus_tool, handle_define_syllabus, handle_evaluate_activity, handle_filter_oers, handle_generate_activity, handle_generate_material, handle_get_oers_collections, handle_plan_course, handle_plan_lesson, plan_course_tool, plan_lesson_tool, generate_material_tool, generate_activity_tool, evaluate_activity_tool, get_oers_collections_tool, filter_oers_tool
+from services.agent.tools.tools_manager import handle_define_syllabus, handle_evaluate_activity, handle_filter_oers, handle_generate_activity, handle_generate_material, handle_refine, handle_get_oers_collections, handle_plan_course, handle_plan_lesson, define_syllabus_tool, plan_course_tool, plan_lesson_tool, generate_material_tool, generate_activity_tool, evaluate_activity_tool, refine_tool, get_oers_collections_tool, filter_oers_tool
 from mcp.server import Server
 from mcp.server.stdio import stdio_server
 from mcp.types import Tool, TextContent
@@ -16,6 +16,7 @@ tools = [
         generate_material_tool,
         generate_activity_tool,
         evaluate_activity_tool,
+        refine_tool,
         get_oers_collections_tool,
         filter_oers_tool        
     ]
@@ -87,6 +88,8 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
         return await handle_generate_activity(arguments)
     elif name == "evaluate_activity":
         return await handle_evaluate_activity(arguments)
+    elif name == "refine":
+        return await handle_refine(arguments)
     elif name == "get_oers_collections":
         return await handle_get_oers_collections(arguments)
     elif name == "filter_oers":

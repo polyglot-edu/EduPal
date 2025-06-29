@@ -424,6 +424,29 @@ evaluate_activity_tool = Tool(
     },
 )
 
+refine_tool = Tool(
+    name="refine",
+    description="Refine a given json object based on some instructions",
+    inputSchema={
+        "type": "object",
+        "properties": {
+            "json_object": {
+                "type": "string",
+                "description": "the json object to refine in string format"
+            },
+            "instructions": {
+                "type": "string",
+                "description": "the instructions to refine the json object"
+            },
+            "language": {
+                "type": "string",
+                "description": "the language of the object, defaults to English"
+            }
+        },
+        "required": ["json", "instructions", "language"]
+    },  
+)
+
 get_oers_collections_tool = Tool(
     name="get_oers_collections",
     description="Get a list of the available collections (each collection corresponds to a macro subject) inside the Open Educational Resources database",
@@ -722,6 +745,45 @@ async def handle_evaluate_activity(arguments: dict) -> list[TextContent]:
         return [TextContent(
             type="text",
             text=f"Error in evaluate_activity: {str(e)}"
+        )]
+
+async def handle_refine(arguments: dict) -> list[TextContent]:
+    """Handle the refine API call"""
+    try:
+        url = f"{FASTAPI_BASE_URL}/tasks/refine"
+        headers = {
+            "Content-Type": "application/json",
+            "access-key": ACCESS_KEY
+        }
+
+        # Prepare the payload
+        payload = {
+            "json_object": arguments.get("json_object"),
+            "instructions": arguments.get("instructions"),
+            "language": arguments.get("language", "English"),
+            "model": MODEL
+        }
+
+        # Make the API call
+        async with aiohttp.ClientSession() as session:
+            async with session.post(url, json=payload, headers=headers) as response:
+                if response.status == 200:
+                    result = await response.json()
+                    return [TextContent(
+                        type="text",
+                        text=f"{json.dumps(result, indent=2)}"
+                    )]
+                else:
+                    error_text = await response.text()
+                    return [TextContent(
+                        type="text",
+                        text=f"Error calling refine API (Status {response.status}): {error_text}"
+                    )]
+
+    except Exception as e:
+        return [TextContent(
+            type="text",
+            text=f"Error in refine: {str(e)}"
         )]
 
 async def handle_get_oers_collections(arguments: dict) -> list[TextContent]:

@@ -40,9 +40,9 @@ Return only the final, refined JSON string with the same structure.
 
 """Test text:
 {
-  "json_object": "{\n  \"title\": \"Corso di cucina base\",\n  \"level\": \"BEGINNER\",\n  \"description\": \"Impara le basi della cucina italiana.\"\n}",
-  "language": "Italian",
+  "json_object": "{\n  \"title\": \"Moto uniformemente accelerato\",\n  \"education_level\": \"elementary school\",\n  \"description\": \"Impara le basi della cinetica.\"\n}",
   "instructions": "Rendi la descrizione più coinvolgente e aggiungi dettagli sul tipo di piatti che verranno insegnati.",
+  "language": "Italian",
   "model": "Gemini"
 }
 """
