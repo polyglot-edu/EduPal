@@ -22,8 +22,8 @@ def activity(request: GenerateActivityRequest):
         #print("-"*100)
         #print("\n\n\n")
         response: GenerateActivityResponse = llm.generate_text(prompt=generate_activity_prompt(request), response_model=GenerateActivityResponse)
-        print("Response",response)
-        print("-"*100)
+        #print("Response",response)
+        #print("-"*100)
 
         final = Activity(
             macro_subject=request.macro_subject,
