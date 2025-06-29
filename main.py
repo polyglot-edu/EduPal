@@ -25,6 +25,7 @@ services = [
     "services.agent.tools.generate_activity.generate_activity_api",
     "services.agent.tools.evaluate.evaluate_api",
     "services.agent.tools.define_syllabus.define_syllabus_api",
+    "services.agent.tools.refine.refine_api"
 ]
 
 @asynccontextmanager

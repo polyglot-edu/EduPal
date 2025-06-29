@@ -1,6 +1,5 @@
 from pydantic import BaseModel
 from ...utils.common_enums import EducationLevel, LearningOutcome, TypeOfActivity
-from pydantic import BaseModel
 
 class ActivityUtils(BaseModel):
     goal: str # "assess if the audience achieved " / "help the audience achieve "

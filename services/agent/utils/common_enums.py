@@ -104,7 +104,6 @@ def sanitize_enums(data: dict, enum_fields: dict) -> dict:
 
     return data
 
-
 def resolve_enum(enum_class: type[Enum], key: str) -> str | None:
     """Resolve an enum value from a key, safely (case-insensitive)."""
     if not isinstance(key, str):
@@ -113,3 +112,20 @@ def resolve_enum(enum_class: type[Enum], key: str) -> str | None:
         return enum_class[key.upper()].value
     except KeyError:
         return None
+
+def enum_to_str(enum_class: type[Enum]) -> str:
+   """prints an enum with keys and values"""
+   result = []
+   for member in enum_class:
+       result.append(f"{member.name}: {member.value}")
+   return "\n".join(result)
+
+def print_enums()->str:
+    "prints all the available enums and their values"
+    education_level_enum = enum_to_str(EducationLevel)
+    learning_outcome_enum = enum_to_str(LearningOutcome)
+    type_of_activity_enum = enum_to_str(TypeOfActivity)
+    type_of_assessment_enum = enum_to_str(TypeOfAssessment)
+    action_type_enum = enum_to_str(ActionType)
+    return f"{education_level_enum}\n{learning_outcome_enum}\n{type_of_activity_enum}\n{type_of_assessment_enum}\n{action_type_enum}"
+
