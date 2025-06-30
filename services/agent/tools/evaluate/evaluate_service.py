@@ -22,8 +22,8 @@ def evaluation(request: EvaluateRequest):
         #print("-"*100)
         #print("\n\n\n")
         response: EvaluateResponse = llm.generate_text(prompt=evaluate_prompt(request), response_model=EvaluateResponse)
-        print("Response",response)
-        print("-"*100)
+        #print("Response",response)
+        #print("-"*100)
 
         final = Evaluation(
             macro_subject=request.macro_subject,

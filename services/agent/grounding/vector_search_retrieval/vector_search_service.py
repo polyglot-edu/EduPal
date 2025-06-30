@@ -28,40 +28,40 @@ def pair_queries_with_collection(
     Returns:
         List of tuples in the form: (query, best_matching_collection_name, similarity_score)
     """
-    print("Starting pair_queries_with_collection...")
-    print(f"Queries received: {queries}")
-    print(f"Collections received: {collections}")
+    #print("Starting pair_queries_with_collection...")
+    #print(f"Queries received: {queries}")
+    #print(f"Collections received: {collections}")
 
     # Compute embeddings
-    print("Computing embeddings for queries...")
+    #print("Computing embeddings for queries...")
     query_embeddings = embeddings.embed_documents(queries)
-    print(f"Query embeddings shape: {np.array(query_embeddings).shape}")
+    #print(f"Query embeddings shape: {np.array(query_embeddings).shape}")
 
-    print("Computing embeddings for collections...")
+    #print("Computing embeddings for collections...")
     collection_embeddings = embeddings.embed_documents(collections)
-    print(f"Collection embeddings shape: {np.array(collection_embeddings).shape}")
+    #print(f"Collection embeddings shape: {np.array(collection_embeddings).shape}")
 
     results: List[Tuple[str, str, float]] = []
 
     # Pair each query to the closest collection
     for i, query_embedding in enumerate(query_embeddings):
-        print(f"\nProcessing query {i}: '{queries[i]}'")
+        #print(f"\nProcessing query {i}: '{queries[i]}'")
 
         # Compute cosine similarity between this query embedding and all collection embeddings
         similarities = cosine_similarity([query_embedding], collection_embeddings)
-        print(f"Similarities array: {similarities}")
+        #print(f"Similarities array: {similarities}")
 
         best_match_idx = np.argmax(similarities)
-        print(f"Best matching index: {best_match_idx}")
+        #print(f"Best matching index: {best_match_idx}")
 
         best_collection = collections[best_match_idx]
         best_similarity = similarities[0][best_match_idx]
-        print(f"Best matching collection: '{best_collection}' with similarity score: {best_similarity}")
+        #print(f"Best matching collection: '{best_collection}' with similarity score: {best_similarity}")
 
         # Append the result including similarity score for debugging purposes
         results.append((queries[i], best_collection, float(best_similarity)))
 
-    print(f"\nFinal pairing results: {results}")
+    #print(f"\nFinal pairing results: {results}")
     return results
 
 
@@ -223,7 +223,7 @@ def vector_search_with_filter(
             new_results.append(result)
     results = new_results
 
-    print("\n" + "-"*50 + "\n" + "\n".join(result.to_str() for result in results))
+    #print("\n" + "-"*50 + "\n" + "\n".join(result.to_str() for result in results))
 
     return results
 
@@ -245,13 +245,13 @@ async def find_resources_from_queries(
     index_name = "embedding_vector_index"
     collection = db[collection_name]
 
-    print(db_name, collection_name)
+    #print(db_name, collection_name)
 
     resource_to_queries = defaultdict(list)  # resource_id -> list of queries that matched it
 
     for query in queries:
         try:
-            print(f"Processing query: {query}")
+            #print(f"Processing query: {query}")
             cursor = collection.aggregate([
                 {
                     '$search': {
@@ -274,7 +274,7 @@ async def find_resources_from_queries(
 
             docs = list(cursor)  # Consume cursor
             if not docs:
-                print(f"No documents found for query: {query}")
+                #print(f"No documents found for query: {query}")
                 continue
 
             # Get max similarity
@@ -285,13 +285,13 @@ async def find_resources_from_queries(
             # Collect resources above threshold
             query_results = []
             for doc in docs:
-                print(f"Document ID: {doc['_id']}, Similarity: {doc['score']}")
+                #print(f"Document ID: {doc['_id']}, Similarity: {doc['score']}")
                 normalized_score = doc['score'] / max_similarity if max_similarity > 0 else 0
                 if normalized_score >= score_threshold:
                     query_results.append((doc['_id'], doc['score']))
 
             if len(query_results) == 0 or not query_results:
-                print(f"No results above threshold for query: {query}")
+                #print(f"No results above threshold for query: {query}")
                 continue
 
             # Top-k by score
@@ -301,7 +301,7 @@ async def find_resources_from_queries(
                 resource_to_queries[str(doc_id)].append(query)
 
         except Exception as e:
-            print(f"Error during aggregation for query '{query}': {e}")
+            #print(f"Error during aggregation for query '{query}': {e}")
             continue
 
     # Convert to list of Grounding objects

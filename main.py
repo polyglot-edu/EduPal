@@ -1,5 +1,5 @@
 # main.py in the root directory
-from fastapi import FastAPI
+from fastapi import FastAPI, logger
 from fastapi.middleware.cors import CORSMiddleware
 import importlib
 import asyncio
@@ -64,7 +64,7 @@ app.include_router(auth_router)
 app.include_router(OERs_router)
 app.include_router(vector_search_router)
 app.include_router(analyse_material_router)
-print(f"Successfully loaded API routes from auth and chatbot modules")
+#print(f"Successfully loaded API routes from auth and chatbot modules")
 
 # Root endpoint
 @app.get("/")
@@ -86,8 +86,10 @@ for service_module in services:
         # Look for the include_router function in each service module
         if hasattr(module, "include_router"):
             module.include_router(app)
-            print(f"Successfully loaded API routes from {service_module}")
+            #print(f"Successfully loaded API routes from {service_module}")
         else:
-            print(f"Module {service_module} does not have include_router function")
+            logger.error(f"Module {service_module} does not have include_router function")
+            #print(f"Module {service_module} does not have include_router function")
     except ImportError as e:
-        print(f"Could not import {service_module}: {e}")
+        logger.error(f"Could not import {service_module}: {e}")
+        #print(f"Could not import {service_module}: {e}")

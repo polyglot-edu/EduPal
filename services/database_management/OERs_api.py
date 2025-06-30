@@ -1,7 +1,7 @@
 from typing import List
 from bson import ObjectId
 from click import Tuple
-from fastapi import APIRouter, HTTPException, status, Header, Body
+from fastapi import APIRouter, HTTPException, logger, status, Header, Body
 import os
 from motor.motor_asyncio import AsyncIOMotorClient
 
@@ -52,7 +52,7 @@ async def upload_to_oerdb(request: UploadRequest = Body(...), token: str = Heade
         authenticate(access_key)
 
         username, _, _ = await validate_token(user_db, token, SECRET_KEY, ALGORITHM)
-        print(f"Authenticated user: {username}")
+        #print(f"Authenticated user: {username}")
         # Get user's personal collection
         user_collection = user_db[username]
 
@@ -73,7 +73,7 @@ async def upload_to_oerdb(request: UploadRequest = Body(...), token: str = Heade
                 detail="Only teachers or admins can upload OERs"
             )
         
-        print(request.resources_ids)
+        #print(request.resources_ids)
         # Retrieve the resource
         resources: List[Resource] = await get_complete_resources_by_ids(user_collection, request.resources_ids)
         if not resources:
@@ -82,12 +82,12 @@ async def upload_to_oerdb(request: UploadRequest = Body(...), token: str = Heade
                 detail="Resources not found"
             )
         
-        print(f"resources type: {type(resources)}")
+        #print(f"resources type: {type(resources)}")
 
         queries = [resource.analysis.macro_subject for resource in resources]
-        print(f"Queries: {queries}")
+        #print(f"Queries: {queries}")
         collections: List[str] = await db.list_collection_names()
-        print(f"Collections: {collections}")
+        #print(f"Collections: {collections}")
         
         # Get the matching collection from the OERs database
         pairs = pair_queries_with_collection(
@@ -95,13 +95,13 @@ async def upload_to_oerdb(request: UploadRequest = Body(...), token: str = Heade
             collections=collections
         )
 
-        print(f"User profile: {role}")
+        #print(f"User profile: {role}")
 
         for idx, (query, best_collection, similarity_score) in enumerate(pairs):
             resource = resources[idx]
             resource_id = resource.id
             resource_data = resource.model_dump()
-            print(f"Resource data: {resource_id}")
+            #print(f"Resource data: {resource_id}")
             resource_data["_id"] = ObjectId(resource_id)
             analysis =resource_data["analysis"]
             analysis["education_level"] = resource.analysis.education_level.value
@@ -111,31 +111,32 @@ async def upload_to_oerdb(request: UploadRequest = Body(...), token: str = Heade
             # Delete id field
             del resource_data["id"]
 
-            print(f"Similarity score: {similarity_score}")
-            print(f"Similarity threshold: {SIMILARITY_THRSHOLD}")
+            #print(f"Similarity score: {similarity_score}")
+            #print(f"Similarity threshold: {SIMILARITY_THRSHOLD}")
             if similarity_score > SIMILARITY_THRSHOLD:
                 # Use the matched collection
                 collection = db[best_collection]
-                print("similarity is high enough, using existing collection")
+                #print("similarity is high enough, using existing collection")
                 # Check if resource already exists (assuming uniqueness by "_id")
                 existing = await collection.find_one({"_id": resource_id})
                 if not existing:
-                    print(resource_data["analysis"])
+                    #print(resource_data["analysis"])
                     await collection.insert_one(resource_data)
-                    print(f"Inserted into existing collection: {best_collection}")
+                    #print(f"Inserted into existing collection: {best_collection}")
                 else:
-                    print(f"Resource already exists in {best_collection}, skipping.")
+                    logger.info(f"Resource already exists in {best_collection}, skipping.")
+                    #print(f"Resource already exists in {best_collection}, skipping.")
 
             else:
                 # Similarity too low — create a new collection named after macro_subject
-                print("similarity is too low, creating new collection")
+                #print("similarity is too low, creating new collection")
                 new_collection_name = resource.analysis.macro_subject.replace(" ", "_").lower()
                 collection = db[new_collection_name]
                 resp = await collection.insert_one(resource_data)
-                print(resp.inserted_id)
+                #print(resp.inserted_id)
                 response = await create_search_index(collection_name=new_collection_name, database_name=db.name)
-                print(response)
-                print(f"Inserted into new collection: {new_collection_name}")
+                #print(response)
+                #print(f"Inserted into new collection: {new_collection_name}")
 
         return UploadResponse(
             success=True,
@@ -143,7 +144,7 @@ async def upload_to_oerdb(request: UploadRequest = Body(...), token: str = Heade
         )
 
     except Exception as e:
-        print(f"Error during OERs upload: {e}")
+        #print(f"Error during OERs upload: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=str(e)
@@ -163,7 +164,7 @@ async def delete_oer(request: DeleteRequest = Body(...), token: str = Header(...
         authenticate(access_key)
 
         username, _, _ = await validate_token(user_db, token, SECRET_KEY, ALGORITHM)
-        print(f"Authenticated user: {username}")
+        #print(f"Authenticated user: {username}")
         # Get user's personal collection
         user_collection = user_db[username]
 
@@ -203,7 +204,7 @@ async def delete_oer(request: DeleteRequest = Body(...), token: str = Header(...
         return {"success": True, "message": "OERs deleted successfully"}
 
     except Exception as e:
-        print(f"Error during OERs deletion: {e}")
+        #print(f"Error during OERs deletion: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=str(e)
@@ -269,21 +270,21 @@ async def get_oers_by_collection(filters: Filters = Body(...), access_key: str =
     Get OERs from a specific collection based on title, description (vector search placeholder), and education level.
     """
     try:
-        print("Authenticating access key...")
+        #print("Authenticating access key...")
         authenticate(access_key)
-        print("Authentication successful.")
+        #print("Authentication successful.")
 
         if not filters.collection_name:
-            print("Missing collection name in filters!")
+            #print("Missing collection name in filters!")
             raise HTTPException(status_code=400, detail="Collection name is required")
 
-        print(f"Using collection: {filters.collection_name}")
+        #print(f"Using collection: {filters.collection_name}")
         # list database collections
         collections = await db.list_collection_names()
-        print("Collections in database: ", collections)
+        #print("Collections in database: ", collections)
 
         if filters.collection_name not in collections:
-            print(f"Collection {filters.collection_name} not found in database.")
+            #print(f"Collection {filters.collection_name} not found in database.")
             raise HTTPException(status_code=404, detail=f"Collection {filters.collection_name} not found in database.")
 
         cn = filters.collection_name
@@ -291,13 +292,13 @@ async def get_oers_by_collection(filters: Filters = Body(...), access_key: str =
 
         # get the number of documents in the collection:
         num_docs = await collection.count_documents({})
-        print(f"Number of documents in collection {cn}: {num_docs}")
+        #print(f"Number of documents in collection {cn}: {num_docs}")
 
         # 1. Title Search
         if filters.title and filters.title.strip() != "":
-            print(f"Title filter provided: {filters.title}")
+            #print(f"Title filter provided: {filters.title}")
 
-            print("Searching for exact title match...")
+            #print("Searching for exact title match...")
             exact_match = await collection.find_one(
                 {"analisys.title": filters.title},
                 {
@@ -307,14 +308,14 @@ async def get_oers_by_collection(filters: Filters = Body(...), access_key: str =
                     "document_type": 1
                 }
             )
-            print(f"Exact title match result: {exact_match}")
+            #print(f"Exact title match result: {exact_match}")
 
             if exact_match:
                 exact_match["_id"] = str(exact_match["_id"])
-                print("Returning exact title match result.")
+                #print("Returning exact title match result.")
                 return [ResourceDocumentSimplified(**exact_match)]
 
-            print("No exact match found. Searching for partial (regex) matches...")
+            #print("No exact match found. Searching for partial (regex) matches...")
             similar_titles = await collection.find(
                 {"analisys.title": {"$regex": filters.title, "$options": "i"}},
                 {
@@ -325,38 +326,39 @@ async def get_oers_by_collection(filters: Filters = Body(...), access_key: str =
                 }
             ).to_list(length=None)
 
-            print(f"Similar titles found: {similar_titles}")
+            #print(f"Similar titles found: {similar_titles}")
 
             if similar_titles:
                 for doc in similar_titles:
                     doc["_id"] = str(doc["_id"])
-                print("Returning similar title matches.")
+                #print("Returning similar title matches.")
                 return [ResourceDocumentSimplified(**doc) for doc in similar_titles]
             else:
-                print("No title matches found at all.")
+                logger.error("No title matches found at all.")
+                #print("No title matches found at all.")
 
         # 2. Description Vector Search
         if filters.description and filters.description.strip() != "":
-            print(f"Description filter provided: {filters.description}")
+            #print(f"Description filter provided: {filters.description}")
 
-            print("Running vector search placeholder...")
-            print(f"Target collection: {filters.collection_name}")
-            print(f"Target description: {filters.description}")
+            #print("Running vector search placeholder...")
+            #print(f"Target collection: {filters.collection_name}")
+            #print(f"Target description: {filters.description}")
             collections: List[Tuple[str, str, float]] = pair_queries_with_collection([filters.description], [filters.collection_name])
             tup: Tuple[str, str, float] = collections[0]
-            print(f"Vector search collections result: {collections[0]}")
+            #print(f"Vector search collections result: {collections[0]}")
 
             collection_name = tup[1]
-            print(f"Target collection for vector search: {collection_name}")
+            #print(f"Target collection for vector search: {collection_name}")
 
             res: List[Grounding] = await find_resources_from_queries([filters.description], collection_name, k=5, db_name=DB_NAME, score_threshold=SCORE_THRESHOLD)
             #print(f"Vector search resources (Grounding): {res}")
 
             resource_ids = [doc.resource for doc in res]
-            print(f"Resource IDs from vector search: {resource_ids}")
+            #print(f"Resource IDs from vector search: {resource_ids}")
 
             if not resource_ids:
-                print("No resources found via vector search.")
+                #print("No resources found via vector search.")
                 raise HTTPException(status_code=404, detail="No resources found from vector search.")
 
             cursor = collection.find(
@@ -369,36 +371,36 @@ async def get_oers_by_collection(filters: Filters = Body(...), access_key: str =
                 }
             )
             resource_documents = await cursor.to_list(length=None)
-            print(f"Resource documents retrieved from DB: {resource_documents}")
+            #print(f"Resource documents retrieved from DB: {resource_documents}")
 
             if not resource_documents:
-                print("No resources found via vector search.")
+                #print("No resources found via vector search.")
                 raise HTTPException(status_code=404, detail="No resources found from vector search.")
 
             for doc in resource_documents:
                 if "_id" in doc:
                     doc["_id"] = str(doc["_id"])
 
-            print("Converting MongoDB docs to Pydantic models...")
+            #print("Converting MongoDB docs to Pydantic models...")
             resource_list = [ResourceDocumentSimplified(**doc) for doc in resource_documents]
-            print(f"Converted resource list: {resource_list}")
+            #print(f"Converted resource list: {resource_list}")
 
             if resource_list:
                 if filters.education_level and filters.education_level.value != "":
-                    print(f"Filtering vector results by education level: {filters.education_level.value}")
+                    #print(f"Filtering vector results by education level: {filters.education_level.value}")
                     final_resources = [
                         doc for doc in resource_list
                         if doc.analysis and doc.analysis.education_level == filters.education_level.value
                     ]
-                    print(f"Resources after education level filter: {final_resources}")
+                    #print(f"Resources after education level filter: {final_resources}")
                     resource_list = final_resources
 
-                print("Returning vector search results.")
+                #print("Returning vector search results.")
                 return resource_list
 
         # 3. Only Education Level Filter (if no description or no vector results)
         if filters.education_level and filters.education_level.value != "":
-            print(f"Education level filter provided: {filters.education_level.value}")
+            #print(f"Education level filter provided: {filters.education_level.value}")
             level_filtered_docs = await collection.find({
                 "analysis.education_level": filters.education_level.value
                 },
@@ -410,19 +412,19 @@ async def get_oers_by_collection(filters: Filters = Body(...), access_key: str =
                 }
             ).to_list(length=None)
 
-            print(f"Documents matching education level: {level_filtered_docs}")
+            #print(f"Documents matching education level: {level_filtered_docs}")
 
             if level_filtered_docs:
                 for doc in level_filtered_docs:
                     doc["_id"] = str(doc["_id"])
-                print("Returning education level filtered documents.")
+                #print("Returning education level filtered documents.")
                 return [ResourceDocumentSimplified(**doc) for doc in level_filtered_docs]
             else:
-                print("No documents found matching the education level filter.")
+                #print("No documents found matching the education level filter.")
                 raise HTTPException(status_code=404, detail="No documents found matching the education level filter.")
 
         # 4. If no specific filters matched, return everything
-        print("No filters matched. Returning all documents in the collection.")
+        #print("No filters matched. Returning all documents in the collection.")
         all_docs = await collection.find({},{
                     "_id": 1,
                     "uploaded_at": 1,
@@ -433,11 +435,11 @@ async def get_oers_by_collection(filters: Filters = Body(...), access_key: str =
         for doc in all_docs:
             doc["_id"] = str(doc["_id"])
 
-        print(f"Returning all documents: {all_docs}")
+        #print(f"Returning all documents: {all_docs}")
         return [ResourceDocumentSimplified(**doc) for doc in all_docs]
 
     except Exception as e:
-        print(f"Error during OER retrieval: {e}")
+        #print(f"Error during OER retrieval: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -461,6 +463,6 @@ async def get_oer_by_id(request: GetResourceRequest = Body(...), access_key: str
         raise HTTPException(status_code=404, detail="Resource not found")
 
     except Exception as e:
-        print(f"Error during OER retrieval by ID: {e}")
+        #print(f"Error during OER retrieval by ID: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 

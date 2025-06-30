@@ -13,7 +13,7 @@ def test_successful_upload():
         "collection_name": ""
     })
 
-    print("RESULT:  ",response.json().get("result"))
+    #print("RESULT:  ",response.json().get("result"))
 
     assert response.status_code == 200
     assert response.json().get("result") == "Query successful."

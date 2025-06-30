@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Header, Body
+from fastapi import APIRouter, Depends, HTTPException, logger, status, Header, Body
 from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
 from datetime import timedelta, datetime, timezone
 import os
@@ -112,7 +112,8 @@ async def signup(request: UserCreateRequest = Body(...), access_key: str = Heade
                 await db.users.delete_one({"username": request.username})
             except Exception as cleanup_error:
                 # Log the cleanup error but don't raise it
-                print(f"Cleanup error: {cleanup_error}")
+                logger.error(f"Cleanup error: {cleanup_error}")
+                #print(f"Cleanup error: {cleanup_error}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"An error occurred: {str(e)}"

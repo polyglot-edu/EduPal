@@ -12,6 +12,6 @@ def translate(text, language="English", model=None):
         response = llm.generate_text(prompt=translate_prompt(text, language), response_model=TranslateResponse)
         
     except Exception as e:
-        print(f"Error during translation: {e}")
+        #print(f"Error during translation: {e}")
         raise
     return response
