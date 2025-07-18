@@ -429,7 +429,7 @@ async def create_chat(
         if chat_doc_dict.get("_id") is None:
             del chat_doc_dict["_id"]
 
-        #print(chat_doc_dict)
+        print(chat_doc_dict)
 
         result = await user_collection.insert_one(chat_doc_dict)
 
@@ -455,7 +455,60 @@ async def create_chat(
             detail=f"An error occurred: {str(e)}"
         )
 
+@router.put("/chat/{chat_id}/reset", response_model=ChatDocumentSimplified)
+async def reset_chat(
+    chat_id: str,
+    token: str = Header(..., alias="token"),
+    access_key: str = Header(..., alias="access_key")
+):
+    """
+    Reset a chat document to its initial state (empty messages, memory, etc.)
 
+    Parameters:
+    - chat_id: ID of the chat to reset
+    - token: JWT token in headers
+    - access_key: Access key in headers
+
+    Returns:
+    - The reset ChatDocumentSimplified
+    """
+    # Authenticate and authorize
+    authenticate(access_key)
+    username, _, _ = await validate_token(db, token, SECRET_KEY, ALGORITHM)
+
+    user_collection = db[username]
+
+    # New empty values
+    reset_fields = {
+        "messages": [],
+        "recent_messages": [],
+        "memory": Memory().model_dump(),
+        "state": State().model_dump(),
+        "resources": [],
+        "updated_at": datetime.now(tz=timezone.utc)
+    }
+
+    result = await user_collection.update_one(
+        {"_id": ObjectId(chat_id)},
+        {"$set": reset_fields}
+    )
+
+    if result.modified_count == 0:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Chat document not found or already in initial state"
+        )
+
+    updated_chat = await user_collection.find_one({"_id": ObjectId(chat_id)})
+
+    if updated_chat is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Chat document not found after reset"
+        )
+
+    updated_chat["_id"] = str(updated_chat["_id"])
+    return ChatDocumentSimplified(**updated_chat)
 
 @router.put("/chat/{chat_id}/change_name", response_model=ChatDocumentSimplified)
 async def update_chat_name(chat_id: str, chat_name: str = Body(...), token: str = Header(..., alias="token"), access_key: str = Header(..., alias="access_key")):
@@ -536,9 +589,9 @@ async def send_message_to_chat(chat_id: str, message: Message = Body(...), token
 
     # Send the message to the LLM and get the response
     new_messages, next_state = await send_message(send_message_request, user_collection=db[username])
-    #print("-"*50,"\n")
-    #print("Message sent to LLM, response received")
-    #print("\n","-"*50)
+    print("-"*50,"\n")
+    print("Message sent to LLM, response received")
+    print("\n","-"*50)
 
     # Add the messages to the chat document
     user_collection = db[username]
@@ -549,7 +602,7 @@ async def send_message_to_chat(chat_id: str, message: Message = Body(...), token
     )
     
     result = await update_chat_info(user_collection, chat_id, update_chat_request)
-    #print("Chat document updated with new messages")
+    print("Chat document updated with new messages")
     if result: return new_messages
     else:
         raise HTTPException(

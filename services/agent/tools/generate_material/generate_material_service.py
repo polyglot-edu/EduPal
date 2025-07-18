@@ -18,12 +18,12 @@ def material(request: GenerateMaterialRequest):
     else:
         llm = GeminiLLM()
     try:
-        #print("Prompt: ",generate_material_prompt(request))
-        #print("-"*100)
-        #print("\n\n\n")
+        print("Prompt: ",generate_material_prompt(request))
+        print("-"*100)
+        print("\n\n\n")
         response: GenerateMaterialResponse = llm.generate_text(prompt=generate_material_prompt(request), response_model=GenerateMaterialResponse)
-        #print("Response",response)
-        #print("-"*100)
+        print("Response",response)
+        print("-"*100)
 
         final = Material(
             title=request.title,

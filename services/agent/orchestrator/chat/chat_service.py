@@ -131,14 +131,14 @@ async def get_chat_resources(user_collection: AsyncIOMotorCollection, chat_id: s
             )
 
         if chat_document is None or 'resources' not in chat_document:
-            #print("Chat document not found or does not contain resources.")
+            print("Chat document not found or does not contain resources.")
             return []  # No resources found
 
         resource_ids = chat_document.get('resources', [])
         if not resource_ids:
-            #print("No resources linked to this chat document.")
+            print("No resources linked to this chat document.")
             return []  # No linked resources
-        #print(f"Resource IDs found: {resource_ids}")
+        print(f"Resource IDs found: {resource_ids}")
         
         cursor = user_collection.find({"_id": {"$in": [ObjectId(rid) for rid in resource_ids]}, "document_type": "resource"},
             {
@@ -155,7 +155,7 @@ async def get_chat_resources(user_collection: AsyncIOMotorCollection, chat_id: s
             if "_id" in doc:
                 doc["_id"] = str(doc["_id"])
 
-        #print(f"Resource documents found: {resource_documents}")
+        print(f"Resource documents found: {resource_documents}")
 
         # Convert to ResourceDocumentSimplified
         resource_list = [ResourceDocumentSimplified(**doc) for doc in resource_documents]
@@ -198,25 +198,25 @@ async def get_complete_resources_by_ids(user_collection, resource_ids: List[str]
     Get the resources of the chat document from the collection
     """
     try:
-        #print(f"Resource IDs received: {resource_ids}")
+        print(f"Resource IDs received: {resource_ids}")
         # Fetch the complete resources by their IDs
         resource_cursor = user_collection.find({
             "_id": {"$in": [ObjectId(rid) for rid in resource_ids]},
             "document_type": "resource"
         })
         resource_documents = await resource_cursor.to_list(length=None)
-        #print(f"Resource documents found: {resource_documents}")
+        print(f"Resource documents found: {resource_documents}")
 
         # Convert id to string for serialization
         for doc in resource_documents:
             if "_id" in doc:
                 doc["_id"] = str(doc["_id"])
 
-        #print(f"Resource documents found of type: {type(resource_documents)}")
+        print(f"Resource documents found of type: {type(resource_documents)}")
         # Convert to full Resource model
         resource_list = [Resource(**doc) for doc in resource_documents]
 
-        #print(f"Resource documents found of type: {type(resource_list)}")
+        print(f"Resource documents found of type: {type(resource_list)}")
 
         return resource_list
     except Exception as e:
@@ -367,8 +367,8 @@ async def update_chat_info(user_collection, chat_id: str, request: UpdateChatReq
     # Update the chat document with the new memory, state, and messages
     if request.state is not None:
         state = request.state
-    #print(f"State updated: {state.to_str()}")
-    #print(f"Updated memory: {updated_memory.to_str()}")
+    print(f"State updated: {state.to_str()}")
+    print(f"Updated memory: {updated_memory.to_str()}")
 
     result = await user_collection.update_one(
         {"_id": ObjectId(chat_id)},
@@ -433,8 +433,8 @@ async def send_message(request: SendMessageRequest, user_collection: AsyncIOMoto
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Error generating response"
             )
-        #print(f"Planning Response: {planning_response}")
-        #print("-"*50)
+        print(f"Planning Response: {planning_response}")
+        print("-"*50)
 
         if planning_response.validity != "True":
             response_message = planning_response.validity
@@ -451,6 +451,8 @@ async def send_message(request: SendMessageRequest, user_collection: AsyncIOMoto
             return messages, request.state
         
         elif planning_response.answer == "Proceed":
+            if planning_response.goal_state.steps_done.__len__() == 0:
+                request.state.grounding_state.reset()
             response_message = "\n".join(planning_response.goal_state.next_steps)
             assistant_message = Message(
                 role="planner",
@@ -473,17 +475,17 @@ async def send_message(request: SendMessageRequest, user_collection: AsyncIOMoto
             # Perform current task
             while steps < MAX_STEPS and confidence <CONFIDENCE_THRESHOLD and request_analysis_reviewed.state.grounding_state.last_grounding_step != GroundingSteps.CHAT_HISTORY.value:
                 steps += 1
-                #print("-"*50)
-                #print(f"Grounded info:\n")
-                #print(request_analysis_reviewed.state.grounding_state.grounded_info)
-                #print("\n"*3)
-                #print(request_analysis_reviewed.state.grounding_state.last_grounding_step)
-                #print("-"*50)
+                print("-"*50)
+                print(f"Grounded info:\n")
+                print(request_analysis_reviewed.state.grounding_state.grounded_info)
+                print("\n"*3)
+                print(request_analysis_reviewed.state.grounding_state.last_grounding_step)
+                print("-"*50)
 
                 # fill in the prompt template and call the LLM
                 s_prompt = await step_analysis_prompt(request=request_analysis_reviewed)
                 s_prompt = s_prompt + sys_instructions + resources_message
-                #print("\nResources message:", resources_message,"\n")
+                print("\nResources message:", resources_message,"\n")
                 ##print(f"Step analysis prompt: {s_prompt}")
                 ##print("-"*50)
                 grounding_response: GorundedResponse = llm.generate_text(
@@ -497,8 +499,8 @@ async def send_message(request: SendMessageRequest, user_collection: AsyncIOMoto
                         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                         detail="Error generating grounding response"
                     )
-                #print(f"Grounding response: {grounding_response}")
-                #print("-"*50)
+                print(f"Grounding response: {grounding_response}")
+                print("-"*50)
                 
                 # If needed, ask a follow-up question 
                 if grounding_response.follow_up != "None":
@@ -513,7 +515,7 @@ async def send_message(request: SendMessageRequest, user_collection: AsyncIOMoto
                 
                 # If the confidence is above the threshold, return the response
                 if grounding_response.confidence >= CONFIDENCE_THRESHOLD or grounding_response.grounding == GroundingSteps.CHAT_HISTORY.value:
-                    #print(f"Confidence reached: {grounding_response.confidence}")
+                    print(f"Confidence reached: {grounding_response.confidence}")
                     response_message = grounding_response.answer
                     assistant_message = Message(
                         role="grounding",
@@ -523,7 +525,7 @@ async def send_message(request: SendMessageRequest, user_collection: AsyncIOMoto
                     messages.append(assistant_message)
 
                     if grounding_response.tool_call != "None":
-                        #print("-"*50,"\nTool call:", grounding_response.tool_call,"\n", "-"*50)
+                        print("-"*50,"\nTool call:", grounding_response.tool_call,"\n", "-"*50)
                         tool_call_dict: dict = json.loads(grounding_response.tool_call)
                         tool_name = tool_call_dict.get("tool_name")
                         tool_params = tool_call_dict.get("parameters")
@@ -533,12 +535,12 @@ async def send_message(request: SendMessageRequest, user_collection: AsyncIOMoto
                             else:
                                 converted_tool_params = tool_params
                             # call your MCP server call_tool function here asynchronously
-                            #print("-"*50,"\nCalling tool:", tool_name,"\n", "-"*50)
-                            #print("-"*50,"\nTool parameters:", converted_tool_params,"\n", "-"*50)
+                            print("-"*50,"\nCalling tool:", tool_name,"\n", "-"*50)
+                            print("-"*50,"\nTool parameters:", converted_tool_params,"\n", "-"*50)
                             tool_response: list[TextContent] = await call_tool(tool_name, tool_params)
-                            #print("-"*50,"\nTool response:", tool_response,"\n", "-"*50)
+                            print("-"*50,"\nTool response:", tool_response[0].text,"\n", "-"*50)
                             tool_text = tool_response[0].text if tool_response else "No response"
-                            if tool_text is not None and isinstance(tool_response, TextContent):
+                            if tool_text is not None and isinstance(tool_response[0], TextContent):
                                 # Update the state
                                 request_analysis_reviewed.state.grounding_state.models.append(tool_text)
                                 tool_message = Message(
@@ -548,7 +550,7 @@ async def send_message(request: SendMessageRequest, user_collection: AsyncIOMoto
                                 messages.append(tool_message)
                             else: 
                                 logger.error("Tool response is None")
-                                #print("-"*50,"\nTool response is None\n", "-"*50)
+                                print("-"*50,"\nTool response is None\n", "-"*50)
                     
                     new_state.goal_state.steps_done.append(planning_response.goal_state.next_steps[0])
                     new_state.goal_state.next_steps.pop(0)  # Remove the first step as it is being processed
@@ -563,8 +565,8 @@ async def send_message(request: SendMessageRequest, user_collection: AsyncIOMoto
                             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                             detail="Error generating response"
                         )
-                    #print(f"Refining response: {refining_response}")
-                    #print("-"*50)
+                    print(f"Refining response: {refining_response}")
+                    print("-"*50)
                     response_message = refining_response.refined_answer
                     assistant_message = Message(
                         role="assistant",
@@ -577,7 +579,7 @@ async def send_message(request: SendMessageRequest, user_collection: AsyncIOMoto
                 
                 # If the confidence is below the threshold, perform grounding to gather more information
                 elif grounding_response.confidence < CONFIDENCE_THRESHOLD:
-                    #print(f"Confidence not reached: {grounding_response.confidence}\n")
+                    print(f"Confidence not reached: {grounding_response.confidence}\n")
                     grounded_information: str = await ground_response(
                         user_collection, 
                         request.chat_id,
@@ -588,7 +590,7 @@ async def send_message(request: SendMessageRequest, user_collection: AsyncIOMoto
                         planning_response.goal_state.to_str(),
                         grounding_response.reasoning,
                         request.model)
-                    #print(f"\nGrounded information: {grounded_information}\n")
+                    print(f"\nGrounded information: {grounded_information}\n")
                     request_analysis_reviewed.state.grounding_state.grounded_info = grounded_information
                     request_analysis_reviewed.state.grounding_state.last_grounding_step = grounding_response.grounding.value
                 
@@ -613,8 +615,8 @@ async def send_message(request: SendMessageRequest, user_collection: AsyncIOMoto
                     status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                     detail="Error generating response"
                 )
-            #print(f"Refining response: {refining_response}")
-            #print("-"*50)
+            print(f"Refining response: {refining_response}")
+            print("-"*50)
             response_message = refining_response.refined_answer
             assistant_message = Message(
                 role="assistant",

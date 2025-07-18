@@ -20,6 +20,6 @@ def summary(text, model=None, style=TextStyle.STANDARD, education_level=Educatio
     try:
         response = llm.generate_text(prompt=summarize_prompt(text, style, education_level, learning_outcome), response_model=SummarizeResponse)
     except Exception as e:
-        #print(f"Error during summarization: {e}")
+        print(f"Error during summarization: {e}")
         raise
     return response

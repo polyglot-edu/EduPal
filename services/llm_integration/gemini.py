@@ -49,7 +49,7 @@ class GeminiLLM(LLMInterface):
         if response_schema is not None:
             input_prompt += f"\n\nOutput Response Schema: {response_schema}"
 
-        #print(f"Input Prompt: {input_prompt}. \n")
+        print(f"Input Prompt: {input_prompt}. \n")
 
         try:
             if image is not None:
@@ -79,7 +79,7 @@ class GeminiLLM(LLMInterface):
             # If no response model is specified, return the raw text
             return response.text
         except Exception as e:
-            #print(f"Error generating JSON with Gemini: {e}")
+            print(f"Error generating JSON with Gemini: {e}")
             return ""
         
     def generate_image(
@@ -99,6 +99,6 @@ class GeminiLLM(LLMInterface):
             )
             return response.generated_images[0].image
         except Exception as e:
-            #print(f"Error generating image with Gemini: {e}")
+            print(f"Error generating image with Gemini: {e}")
             return ""
         

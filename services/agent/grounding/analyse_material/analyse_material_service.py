@@ -228,7 +228,7 @@ def ocr_pdf_page(page_image) -> str:
         text = pytesseract.image_to_string(page_image, lang='eng')
         return text
     except Exception as e:
-        #print(f"OCR failed for page: {str(e)}")
+        print(f"OCR failed for page: {str(e)}")
         return ""
 
 def read_pdf_file(file_path: str) -> List[Document]:
@@ -242,7 +242,7 @@ def read_pdf_file(file_path: str) -> List[Document]:
 
     try:
         with pdfplumber.open(file_path) as pdf:
-            #print(f"PDF has {len(pdf.pages)} pages")  # Debug
+            print(f"PDF has {len(pdf.pages)} pages")  # Debug
 
             for page_num, page in enumerate(pdf.pages):
                 page_text = page.extract_text()
@@ -257,16 +257,16 @@ def read_pdf_file(file_path: str) -> List[Document]:
                 else:
                     documents.append(Document(page_content=page_text, metadata={"page": page_num + 1}))
 
-            #print(f"Pages needing OCR: {pages_needing_ocr}")  # Debug
+            print(f"Pages needing OCR: {pages_needing_ocr}")  # Debug
 
             # Process pages that need OCR
             if pages_needing_ocr:
-                #print(f"Converting {len(pages_needing_ocr)} pages to images for OCR...")
+                print(f"Converting {len(pages_needing_ocr)} pages to images for OCR...")
                 images = convert_from_path(file_path)
 
                 for page_num in pages_needing_ocr:
                     if page_num < len(images):
-                        #print(f"Running OCR on page {page_num + 1}...")  # Debug
+                        print(f"Running OCR on page {page_num + 1}...")  # Debug
                         ocr_text = ocr_pdf_page(images[page_num])
 
                         # Replace the placeholder with actual OCR text
@@ -276,7 +276,7 @@ def read_pdf_file(file_path: str) -> List[Document]:
                                 break
 
             # Debug: Print final extracted text
-            #print(f"Final extracted text (first 500 chars): {documents[0].page_content[:100] if documents else 'No Documents'}")
+            print(f"Final extracted text (first 500 chars): {documents[0].page_content[:100] if documents else 'No Documents'}")
 
     except Exception as e:
         raise ValueError(f"Failed to read PDF file: {str(e)}")
@@ -321,14 +321,14 @@ def get_text_from_source(text: str) -> List[Document]:
     """
     # Check if it's a YouTube URL
     if is_youtube_url(text):
-        #print(f"Detected YouTube URL: {text}")
+        print(f"Detected YouTube URL: {text}")
         captions = get_youtube_captions(text)
-        #print(captions[:500])
+        print(captions[:500])
         return [Document(page_content=captions, metadata={"source": "youtube"})]
 
     # Check if it's a regular URL
     if is_url(text):
-        #print(f"Detected URL: {text}")
+        print(f"Detected URL: {text}")
         content = extract_web_content(text)
         return [Document(page_content=content, metadata={"source": "webpage"})]
 
@@ -338,20 +338,20 @@ def get_text_from_source(text: str) -> List[Document]:
         if file_path.exists():
             file_extension = file_path.suffix.lower()
             if file_extension == ".txt":
-                #print(f"Detected text file: {text}")
+                print(f"Detected text file: {text}")
                 content = read_text_file(text)
                 return [Document(page_content=content, metadata={"source": "text_file"})]
             elif file_extension == ".pdf":
-                #print(f"Detected PDF file: {text}")
+                print(f"Detected PDF file: {text}")
                 return read_pdf_file(text)
             elif file_extension == ".docx":
-                #print(f"Detected DOCX file: {text}")
+                print(f"Detected DOCX file: {text}")
                 return read_docx_file(text)
             elif file_extension == ".pptx":
-                #print(f"Detected PPTX file: {text}")
+                print(f"Detected PPTX file: {text}")
                 return read_pptx_file(text)
             elif file_extension in [".jpg", ".jpeg", ".png"]:
-                #print(f"Detected image file: {text}")
+                print(f"Detected image file: {text}")
                 # Perform OCR on the image file
                 try:
                     image = Image.open(text)
@@ -369,7 +369,7 @@ def get_text_from_source(text: str) -> List[Document]:
                 raise ValueError(f"Unsupported file type: {file_extension}")
     
     # It's direct text content
-    #print("Detected direct text content.")
+    print("Detected direct text content.")
     return [Document(page_content=text, metadata={"source": "direct_text"})]
 
 def extract_plain_text_from_documents(documents: List[Document]) -> str:
@@ -443,10 +443,10 @@ def analysis(request: AnalyseMaterialRequest) -> Analysis:
         # 3. Process each chunk with the LLM
         responses: List[AnalyseMaterialResponse] = []
         for i, chunk in enumerate(chunks):
-            #print(f"Processing chunk {i + 1}/{len(chunks)}...")
+            print(f"Processing chunk {i + 1}/{len(chunks)}...")
             prompt = analyse_material_prompt(AnalyseMaterialRequest(text=chunk, model=request.model))
             response: AnalyseMaterialResponse = llm.generate_text(prompt=prompt, response_model=AnalyseMaterialResponse)
-            #print(f"Chunk {i + 1} response: {response}")
+            print(f"Chunk {i + 1} response: {response}")
             responses.append(response)
 
         # 4. Merge the responses

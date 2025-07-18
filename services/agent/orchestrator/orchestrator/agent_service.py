@@ -34,7 +34,7 @@ def fetch_page_summary(url: str) -> str:
             return first_p.get_text(strip=True)
 
         # If all fails
-        #print("No description or paragraph found.")
+        print("No description or paragraph found.")
         return ""
 
     except Exception as e:
@@ -57,7 +57,7 @@ def google_cse_search(query, api_key, cse_id, num=5) -> Tuple[str, List[WebGroun
         title = item.get("title")
         link = item.get("link")
         summary = fetch_page_summary(link)
-        #print(f"Title: {title}, Link: {link}, Summary: {summary}")
+        print(f"Title: {title}, Link: {link}, Summary: {summary}")
         web_result = WebGroundingResponse(title=title, url=link, summary=summary)
         results.append(web_result)
     final_results: Tuple[str, List[WebGroundingResponse]] = (query, results)
@@ -78,7 +78,7 @@ async def ground_response(user_collection: AsyncIOMotorCollection, chat_id, sour
     grounded_material = ""
 
     if source == GroundingSteps.USER_RESOURCES:
-        #print("Grounding using user resources...")
+        print("Grounding using user resources...")
         # Get user resources for this chat
         from services.agent.orchestrator.chat.chat_service import get_chat_resources
         chat_resources: List[ResourceDocumentSimplified] = await get_chat_resources(user_collection, chat_id)
@@ -101,9 +101,9 @@ async def ground_response(user_collection: AsyncIOMotorCollection, chat_id, sour
             prompt += f"\nConsider that the user just uploaded the resources with IDs: {resources}"
         try:
             response: UserGroundingResponse = llm.generate_text(prompt=prompt, response_model=UserGroundingResponse)
-            #print(f"User Docs Query Grounding response: {response.grounding}")
+            print(f"User Docs Query Grounding response: {response.grounding}")
         except Exception as e:
-            #print(f"Error during grounding llm call on user resources: {e}")
+            print(f"Error during grounding llm call on user resources: {e}")
             raise
 
         # Perform vector serach on those resources
@@ -112,7 +112,7 @@ async def ground_response(user_collection: AsyncIOMotorCollection, chat_id, sour
 
     
     elif source == GroundingSteps.OERS:
-        #print("Grounding using OERs...")
+        print("Grounding using OERs...")
         grounding_request = UserGroundingRequest(
                                 language=language,
                                 user_intent=intent,
@@ -123,9 +123,9 @@ async def ground_response(user_collection: AsyncIOMotorCollection, chat_id, sour
         prompt = OERs_grounding_prompt(grounding_request)
         try:
             OERresponse: OERsGroundingResponse = llm.generate_text(prompt=prompt, response_model=OERsGroundingResponse)
-            #print(f"OERs Query Grounding response: {OERresponse.queries}")
+            print(f"OERs Query Grounding response: {OERresponse.queries}")
         except Exception as e:
-            #print(f"Error during grounding llm call on user resources: {e}")
+            print(f"Error during grounding llm call on user resources: {e}")
             raise
         # Query the OERs database
         results: List[VectorSearchResults] = await query_OERs(OERresponse.queries)
@@ -133,7 +133,7 @@ async def ground_response(user_collection: AsyncIOMotorCollection, chat_id, sour
 
     else: # web_search
         # Perform a web search using Google Custom Search API
-        #print("Grounding using web search...")
+        print("Grounding using web search...")
         api_key = GOOGLE_SEARCH_API_KEY
         cse_id = GOOGLE_CSE_ID
         web_search_results: List[Tuple[str, List[WebGroundingResponse]]] = []
@@ -147,9 +147,9 @@ async def ground_response(user_collection: AsyncIOMotorCollection, chat_id, sour
         prompt = web_grounding_prompt(web_grounding_request)
         try:
             web_queries: OERsGroundingResponse = llm.generate_text(prompt=prompt, response_model=OERsGroundingResponse)
-            #print(f"\nWeb Query Grounding response: {web_queries.queries}\n")
+            print(f"\nWeb Query Grounding response: {web_queries.queries}\n")
         except Exception as e:
-            #print(f"Error during grounding llm call on user resources: {e}")
+            print(f"Error during grounding llm call on user resources: {e}")
             raise
         
         queries = web_queries.queries
@@ -159,7 +159,7 @@ async def ground_response(user_collection: AsyncIOMotorCollection, chat_id, sour
                 web_search_results.append(results)
                 
             except Exception as e:
-                #print(f"Error during web search: {e}")
+                print(f"Error during web search: {e}")
                 raise
         
         # LLM call to choose best websites
@@ -182,9 +182,9 @@ async def ground_response(user_collection: AsyncIOMotorCollection, chat_id, sour
         )
         try:
             web_response: WebSearchResults = llm.generate_text(prompt=prompt, response_model=WebSearchResults)
-            #print(f"Selected websites {web_response}")
+            print(f"Selected websites {web_response}")
         except Exception as e:
-            #print(f"Error during grounding llm call on web search: {e}")
+            print(f"Error during grounding llm call on web search: {e}")
             raise
 
         # For each result, get the complete website text
@@ -196,7 +196,7 @@ async def ground_response(user_collection: AsyncIOMotorCollection, chat_id, sour
             website_text = extract_web_content(website.url)
             grounded_material += f"\nWebsite Text:\n{website_text}\n\n"
             
-    #print(f"Grounded material: {grounded_material[:100]}")
+    print(f"Grounded material: {grounded_material[:100]}")
 
     return grounded_material
 

@@ -18,12 +18,12 @@ def refinement(request: RefineRequest):
     else:
         llm = GeminiLLM()
     try:
-        #print("Prompt: ",refine_prompt(request))
-        #print("-"*100)
-        #print("\n\n\n")
+        print("Prompt: ",refine_prompt(request))
+        print("-"*100)
+        print("\n\n\n")
         response: Refinement = llm.generate_text(prompt=refine_prompt(request), response_model=Refinement)
-        #print("Response",response)
-        #print("-"*100)
+        print("Response",response)
+        print("-"*100)
 
         final = Refinement(
             refined_json=response.refined_json

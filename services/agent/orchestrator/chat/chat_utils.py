@@ -151,9 +151,9 @@ class GoalState(BaseModel):
         ])
     
     def toString(self) -> str:
-        return f"""Final Goal: Detect (if not given), edit, or confirm the user's final goal (in the detected language).
+        return f"""Final Goal: Detect (if not given), edit (if the user wants to completely change topic), or confirm (if everything flows naturally) the user's final goal (in the detected language).
 Current Intent: Considering all the information at your disposal, clearly state the user's current intent (in the detected language). Rephrase the user request to better capture the intent, the eventual explicit time references and/or resources references. Integrate all the relevant context from the chat history, memory, and user profile. Adhere to PROMPT ENGINEERING best practices, ensuring the intent is clear and actionable. If the intent is not clear, write "Intent Not Clear". If the user intent is to end the chat, write "End Chat".
-Steps Done: List the steps toward the fulfillment of the user intent already done by inferring them from the chat context (in the detected language). If it's a new intent, so no steps have been done, write "None".
+Steps Done: List the steps toward the fulfillment of the user intent already done by inferring them from the chat context (in the detected language). If the final goal is new or if it's changed completely, so no steps have been done in that direction, initialize an empty list.
 Next Steps: If the user query is valid and the final goal is clear, plan, edit, or confirm a list of next steps (including the current step) needed to fulfill the final goal (in the detected language), also considering (eventually) the available tools. For each step, only if applicable, add the name of the tool (by original English name) that you intend to use. The list of steps can contain even just one step (the current step) if the final goal is straightforward. 
 """
     

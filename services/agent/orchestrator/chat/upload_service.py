@@ -45,7 +45,7 @@ def load_pdf(file_path):
     
     for page in pages:
         page.page_content = clean_text(page.page_content)
-    #print(f"read {len(pages)} pages from {file_path}")
+    print(f"read {len(pages)} pages from {file_path}")
     return pages
 
 def split_text(pages, min_chars=500) -> List[Tuple[str, Dict[str, int]]]:
@@ -152,7 +152,7 @@ def iterative_merging(chunks: List[Tuple[str, Dict[str, int]]], model_name: str 
     model = SentenceTransformer(model_name)
     embeddings: np.ndarray = model.encode(texts, convert_to_numpy=True)
     similarities, avg_inter_similarity = compute_similarities(embeddings)
-    #print("Initial average inter chunk similarity:", avg_inter_similarity)
+    print("Initial average inter chunk similarity:", avg_inter_similarity)
 
     groups: List[Tuple[
         List[int],                     # Indices of merged chunks
@@ -198,8 +198,8 @@ def iterative_merging(chunks: List[Tuple[str, Dict[str, int]]], model_name: str 
             else:
                 avg_intra_similarity = 0.0
 
-            #print(f"Average intra-similarity: {avg_intra_similarity}, Group members: {current_group}")
-            #print(f"Last similarity: {similarities[i]}" if i < len(similarities) else "none")
+            print(f"Average intra-similarity: {avg_intra_similarity}, Group members: {current_group}")
+            print(f"Last similarity: {similarities[i]}" if i < len(similarities) else "none")
 
             groups.append((current_group, new_chunk, merged_emb, avg_intra_similarity))
 
@@ -211,14 +211,14 @@ def iterative_merging(chunks: List[Tuple[str, Dict[str, int]]], model_name: str 
             new_inter_similarities.append(sim)
 
         new_avg_inter_similarity: float = float(np.mean(new_inter_similarities))
-        #print(f"New average inter-similarity: {new_avg_inter_similarity}, within {len(new_inter_similarities)} groups")
+        print(f"New average inter-similarity: {new_avg_inter_similarity}, within {len(new_inter_similarities)} groups")
 
         if valid_groups == 0:
             new_avg_intra_similarity: float = 0.0
         else:
             new_avg_intra_similarity = sum(group[3] for group in groups) / valid_groups
 
-        #print(f"New average intra-similarity: {new_avg_intra_similarity} for {valid_groups} groups")
+        print(f"New average intra-similarity: {new_avg_intra_similarity} for {valid_groups} groups")
 
         if new_avg_intra_similarity != 0:
             new_average_silhouette: float = (
@@ -226,13 +226,13 @@ def iterative_merging(chunks: List[Tuple[str, Dict[str, int]]], model_name: str 
                 max(new_avg_intra_similarity, new_avg_inter_similarity)
             )
             if new_average_silhouette <= average_silhouette:
-                #print("Average silhouette did not improve.")
+                print("Average silhouette did not improve.")
                 break
             else:
                 logger.info(f"Average silhouette improved to {new_average_silhouette}")
-                #print(f"Average silhouette improved to {new_average_silhouette}")
+                print(f"Average silhouette improved to {new_average_silhouette}")
 
-        #print("-" * 50)
+        print("-" * 50)
         similarities = new_inter_similarities
         embeddings = [group[2] for group in groups]
         chunks = [group[1] for group in groups]
@@ -279,7 +279,7 @@ def semantic_chunking(file_path: str) -> List[Dict[str, Any]]:
         raise
 
     chunks: List[Tuple[str, Dict[str, int]]] = split_text(pages)
-    #print(f"Loaded {len(chunks)} chunks from {file_path}.")
+    print(f"Loaded {len(chunks)} chunks from {file_path}.")
 
     if len(chunks) == 0:
         error = Exception("Document is empty")
@@ -288,7 +288,7 @@ def semantic_chunking(file_path: str) -> List[Dict[str, Any]]:
 
     if len(chunks) > 1:
         final_chunks: List[Tuple[str, Dict[str, int]]] = iterative_merging(chunks)
-        #print(f"Merged into {len(final_chunks)} chunks.")
+        print(f"Merged into {len(final_chunks)} chunks.")
     else:
         final_chunks = chunks
 
@@ -298,7 +298,7 @@ def semantic_chunking(file_path: str) -> List[Dict[str, Any]]:
         raise error
 
     final_chunks_embeddings: List[List[float]] = generate_final_embeddings(final_chunks)
-    #print(f"Generated embeddings for {len(final_chunks)} chunks.")
+    print(f"Generated embeddings for {len(final_chunks)} chunks.")
 
     # Prepare documents for MongoDB
     documents: List[Dict[str, Any]] = []
@@ -338,7 +338,7 @@ def split_into_mongo_documents(
 
     # Calculate the size of the analysis part
     analysis_size = sys.getsizeof(analysis)
-    #print(f"Analysis size: {analysis_size} bytes")
+    print(f"Analysis size: {analysis_size} bytes")
 
     # Safety check: if analysis itself is bigger than 16MB
     if analysis_size >= max_document_size:
@@ -443,10 +443,10 @@ async def upload(
         # Upload the material to the server and check if it's safe
         if file is not None and file.filename != "":
             logger.info(f"Received file: {file.filename}")
-            #print(f"Received file: {file.filename}")
+            print(f"Received file: {file.filename}")
         elif url is not None and url != "":
             logger.info(f"Received URL: {url}")
-            #print(f"Received URL: {url}")
+            print(f"Received URL: {url}")
         else:
             raise ValueError("No file or URL provided for upload.")
         file_path: str = await check_file(file=file if file else None, url=url if url else None)
@@ -454,7 +454,7 @@ async def upload(
         url = file_path
         analyze_material_request = AnalyseMaterialRequest(text=url, model=model)
         analysed_material = analysis(analyze_material_request) 
-        #print(f"Analyzed material: {analysed_material}")
+        print(f"Analyzed material: {analysed_material}")
         analysis_dict = jsonable_encoder(analysed_material)
 
         # Perform semantic chunking
@@ -478,7 +478,7 @@ async def upload(
             await delete_temp_file(file_path)
     
         if result.inserted_ids:
-            #print(f"Inserted {len(result.inserted_ids)} documents into MongoDB.")
+            print(f"Inserted {len(result.inserted_ids)} documents into MongoDB.")
             return str(result.inserted_ids[0])
         else:
             raise Exception("No documents were inserted into MongoDB.")
