@@ -429,7 +429,7 @@ async def create_chat(
         if chat_doc_dict.get("_id") is None:
             del chat_doc_dict["_id"]
 
-        print(chat_doc_dict)
+        #print(chat_doc_dict)
 
         result = await user_collection.insert_one(chat_doc_dict)
 
@@ -589,9 +589,9 @@ async def send_message_to_chat(chat_id: str, message: Message = Body(...), token
 
     # Send the message to the LLM and get the response
     new_messages, next_state = await send_message(send_message_request, user_collection=db[username])
-    print("-"*50,"\n")
-    print("Message sent to LLM, response received")
-    print("\n","-"*50)
+    #print("-"*50,"\n")
+    #print("Message sent to LLM, response received")
+    #print("\n","-"*50)
 
     # Add the messages to the chat document
     user_collection = db[username]
@@ -602,7 +602,7 @@ async def send_message_to_chat(chat_id: str, message: Message = Body(...), token
     )
     
     result = await update_chat_info(user_collection, chat_id, update_chat_request)
-    print("Chat document updated with new messages")
+    #print("Chat document updated with new messages")
     if result: return new_messages
     else:
         raise HTTPException(

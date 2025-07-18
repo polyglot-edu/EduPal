@@ -36,6 +36,6 @@ def scan_and_process(root_folders, uncomment=False):
 
 if __name__ == "__main__":
     folders_to_process = ["commons", "services"]
-    uncomment = True  # Set True to uncomment, False to comment prints
+    uncomment = False  # Set True to uncomment, False to comment prints
     scan_and_process(folders_to_process, uncomment=uncomment)
     #print(f"✅ Prints have been {'uncommented' if uncomment else 'commented'} in specified folders.")

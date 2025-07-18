@@ -115,7 +115,7 @@ async def signup(request: UserCreateRequest = Body(...), access_key: str = Heade
             except Exception as cleanup_error:
                 # Log the cleanup error but don't raise it
                 logger.error(f"Cleanup error: {cleanup_error}")
-                print(f"Cleanup error: {cleanup_error}")
+                #print(f"Cleanup error: {cleanup_error}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"An error occurred: {str(e)}"
