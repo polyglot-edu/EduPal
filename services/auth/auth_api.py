@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, logger, status, Header, Body
+from fastapi import APIRouter, Depends, HTTPException, status, Header, Body
 from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
 from datetime import timedelta, datetime, timezone
 import os
@@ -7,6 +7,8 @@ from motor.motor_asyncio import AsyncIOMotorClient
 from common.auth import authenticate_user as authenticate
 from .auth_utils import UserCreateRequest, User, Token, PersonalInfo, UserProfileDocument, UserPreferences
 from .auth_service import create_search_index, get_password_hash, authenticate_user, create_access_token, validate_token, get_profile
+import logging
+logger = logging.getLogger(__name__)
 
 # Constants
 SECRET_KEY = os.getenv("USERS_SECRET_KEY", "")

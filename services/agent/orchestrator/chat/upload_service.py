@@ -4,7 +4,7 @@ import re
 import sys
 import json
 import aiofiles
-from fastapi import File, Form, UploadFile, logger
+from fastapi import File, Form, UploadFile
 from fastapi.encoders import jsonable_encoder
 from typing import Any, Dict, List, Tuple, Optional
 from motor.motor_asyncio import AsyncIOMotorCollection
@@ -18,6 +18,9 @@ from langchain_huggingface import HuggingFaceEmbeddings
 from services.agent.grounding.analyse_material.analyse_material_service import analysis, get_text_from_source
 from services.agent.grounding.analyse_material.analyse_material_utils import AnalyseMaterialRequest, Analysis
 from services.agent.orchestrator.chat.chat_utils import Resource
+
+import logging
+logger = logging.getLogger(__name__)
 
 MAX_DOC_SIZE = 16 * 1024 * 1024  # 16MB limit in bytes
 SAFETY_MARGIN = 10000  # some extra bytes to prevent close overflows

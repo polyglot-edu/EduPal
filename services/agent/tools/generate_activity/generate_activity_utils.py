@@ -243,6 +243,7 @@ def get_activity_utils(activity_type: TypeOfActivity, solutions_number: int, dis
 {
   "macro_subject": "History",
   "topic": "The Fall of the Western Roman Empire",
+  "topic_explanation": "no explanation needed",
   "education_level": "high school",
   "learning_outcome": "the ability to recall or recognize simple facts and definitions",
   "material": "a short text describing the reasons for the fall of Rome",

@@ -1,9 +1,11 @@
 from typing import List
 from bson import ObjectId
 from click import Tuple
-from fastapi import APIRouter, HTTPException, logger, status, Header, Body
+from fastapi import APIRouter, HTTPException, status, Header, Body
 import os
 from motor.motor_asyncio import AsyncIOMotorClient
+import logging
+logger = logging.getLogger(__name__)
 
 from common.auth import authenticate_user as authenticate
 from services.agent.grounding.vector_search_retrieval.vector_search_service import find_resources_from_queries, pair_queries_with_collection, query_documents_with_filter

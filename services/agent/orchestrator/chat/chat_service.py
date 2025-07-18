@@ -3,7 +3,7 @@ import json
 from typing import List
 from bson import ObjectId
 from bson.errors import InvalidId
-from fastapi import HTTPException, logger, status
+from fastapi import HTTPException, status
 from mcp.types import TextContent
 from pymongo import UpdateOne
 from motor.motor_asyncio import AsyncIOMotorCollection
@@ -13,6 +13,8 @@ from services.agent.orchestrator.orchestrator.agent_utils import EXIT_GROUNDING_
 from services.llm_integration.gemini import GeminiLLM
 from .chat_utils import Resource, ResourceDocumentSimplified, SendMessageRequest, State, UpdateChatRequest, UpdateStructuredMemoryRequest, UpdateStructuredMemoryResponse, Memory, Message, update_structured_memory_prompt
 from services.auth.auth_service import get_personal_info
+import logging
+logger = logging.getLogger(__name__)
 
 # Constants
 STM_LENGTH = 4000  # "Min" number of tokens for STM memory

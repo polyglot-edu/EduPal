@@ -1,5 +1,5 @@
 # main.py in the root directory
-from fastapi import FastAPI, logger
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import importlib
 import asyncio
@@ -12,6 +12,8 @@ from services.agent.orchestrator.chat.chat_api import router as chat_router
 from services.database_management.OERs_api import router as OERs_router
 from services.agent.grounding.vector_search_retrieval.vector_search_api import router as vector_search_router
 from services.agent.grounding.analyse_material.analyse_material_api import router as analyse_material_router
+import logging
+logger = logging.getLogger(__name__)
 
 load_dotenv()
 

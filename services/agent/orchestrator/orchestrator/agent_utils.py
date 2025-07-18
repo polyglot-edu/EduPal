@@ -46,7 +46,7 @@ Your goal is to generate *only the essential steps* to fulfill the user request.
 
 Important:
 - Before planning, assess if the user's intent is already clear and directly actionable.
-- If the request is straightforward and all required information is available, provide a direct plan or instruct to 'Proceed' without unnecessary decomposition.
+- If the request is straightforward and all required information is available, answer directly without the need of planning.
 - Do NOT generate generic or exploratory steps unless strictly required to reach the user's explicit goal.
 - Respect the specificity of the user's intent. Plan only what is truly necessary to fulfill this precise request.
 
