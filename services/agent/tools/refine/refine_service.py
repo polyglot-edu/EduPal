@@ -1,22 +1,8 @@
-from google import genai
-from dotenv import load_dotenv
+from services.llm_integration.llm_interface import get_llm
 from .refine_utils import RefineRequest, Refinement, refine_prompt
-from services.llm_integration.gemini import GeminiLLM
-import os
-
-load_dotenv()
-API_KEY = os.getenv("GEMINI_API_KEY", "")
-
-client = genai.Client(api_key=API_KEY)
 
 def refinement(request: RefineRequest):
-    model = request.model
-    if model is None:
-        model = "GEMINI"
-    if model.capitalize() == "GEMINI":
-        llm = GeminiLLM()
-    else:
-        llm = GeminiLLM()
+    llm = get_llm(request.model)
     try:
         #print("Prompt: ",refine_prompt(request))
         #print("-"*100)

@@ -28,7 +28,6 @@ class Analysis(BaseModel):
     prerequisites: list[str]
     estimated_duration: int
 
-
 def analyse_material_prompt(text):
    prompt = f"""You are an expert educator specialized in analysing educational material.
 

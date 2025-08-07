@@ -3,7 +3,6 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import importlib
 import asyncio
-import threading
 from contextlib import asynccontextmanager
 from mcp_server import run_mcp_server
 from dotenv import load_dotenv
@@ -27,20 +26,24 @@ services = [
     "services.agent.tools.generate_activity.generate_activity_api",
     "services.agent.tools.evaluate.evaluate_api",
     "services.agent.tools.define_syllabus.define_syllabus_api",
-    "services.agent.tools.refine.refine_api"
+    "services.agent.tools.refine.refine_api",
+    "services.agent.tools.generate_test.generate_test_api",
 ]
+
+from contextlib import suppress
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Manage startup and shutdown events."""
-    # Start MCP server in a background thread
-    def start_mcp():
-        asyncio.run(run_mcp_server())
+    task = asyncio.create_task(run_mcp_server())
 
-    thread = threading.Thread(target=start_mcp, daemon=True)
-    thread.start()
-    
-    yield  # This marks the point where the app is ready to handle requests
+    try:
+        yield  # Let the app run
+    finally:
+        task.cancel()
+        with suppress(asyncio.CancelledError):
+            await task
+
 
 # Create FastAPI app with the lifespan context manager
 app = FastAPI(

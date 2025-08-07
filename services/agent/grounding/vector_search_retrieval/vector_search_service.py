@@ -143,6 +143,8 @@ def vector_search_with_filter(
     Performs vector search for a given set of queries and returns the top k results.
     Returns the query string, the resource id, resource title, and top k matches with similarity, text, and page.
     """
+    if resource.id is None:
+        resource.id = "1"  # Default ID if not set
     # Get embeddings for queries
     embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-mpnet-base-v2")
     queries_embeddings = embeddings.embed_documents(queries)  # shape: [num_queries, 768]
@@ -174,7 +176,7 @@ def vector_search_with_filter(
 
         # Compute cosine similarity
         similarities = cosine_similarity(query_embedding_np, doc_embeddings_np)[0]  # shape: [num_docs]
-
+        
         # Collect similarity, text, and page
         scored_results = [
             (score, text, page) for score, text, page in zip(similarities, doc_texts, doc_pages) if score >= score_threshold

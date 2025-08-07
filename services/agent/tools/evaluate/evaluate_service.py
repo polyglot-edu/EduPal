@@ -1,22 +1,8 @@
-from google import genai
-from dotenv import load_dotenv
+from services.llm_integration.llm_interface import get_llm
 from .evaluate_utils import EvaluateRequest, EvaluateResponse, Evaluation, evaluate_prompt
-from ....llm_integration.gemini import GeminiLLM
-import os
-
-load_dotenv()
-API_KEY = os.getenv("GEMINI_API_KEY", "")
-
-client = genai.Client(api_key=API_KEY)
 
 def evaluation(request: EvaluateRequest):
-    model = request.model
-    if model is None:
-        model = "GEMINI"
-    if model.capitalize() == "GEMINI":
-        llm = GeminiLLM()
-    else:
-        llm = GeminiLLM()
+    llm = get_llm(request.model)
     try:
         #print("Prompt: ",evaluate_prompt(request))
         #print("-"*100)

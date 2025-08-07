@@ -1,27 +1,13 @@
-from google import genai
-from dotenv import load_dotenv
-from .generate_activity_utils import GenerateActivityRequest, GenerateActivityResponse, Activity, generate_activity_prompt
-from ....llm_integration.gemini import GeminiLLM
-import os
-
-load_dotenv()
-API_KEY = os.getenv("GEMINI_API_KEY", "")
-
-client = genai.Client(api_key=API_KEY)
+from services.llm_integration.llm_interface import get_llm
+from .generate_activity_utils import GenerateActivityRequest, Activity, GeneratedActivity, generate_activity_prompt
 
 def activity(request: GenerateActivityRequest):
-    model = request.model
-    if model is None:
-        model = "GEMINI"
-    if model.capitalize() == "GEMINI":
-        llm = GeminiLLM()
-    else:
-        llm = GeminiLLM()
+    llm = get_llm(request.model)
     try:
         #print("Prompt: ",generate_activity_prompt(request))
         #print("-"*100)
         #print("\n\n\n")
-        response: GenerateActivityResponse = llm.generate_text(prompt=generate_activity_prompt(request), response_model=GenerateActivityResponse)
+        response: list[GeneratedActivity] = llm.generate_text(prompt=generate_activity_prompt(request), response_model=list[GeneratedActivity])
         #print("Response",response)
         #print("-"*100)
 
@@ -32,15 +18,12 @@ def activity(request: GenerateActivityRequest):
             education_level=request.education_level,
             learning_outcome=request.learning_outcome,
             material=request.material,
-            assignment=response.assignment,
-            plus=response.plus,
-            solutions=response.solutions,
-            distractors=response.distractors,
-            easily_discardable_distractors=response.easily_discardable_distractors,
-            type=request.type,
+            params=request.params,
+            generated_activities=response,
             language=request.language,
+            model=request.model
         )
-
+            
     except Exception as e:
         raise
 

@@ -24,3 +24,15 @@ class LLMInterface(ABC):
     @abstractmethod
     def generate_image(self, prompt: str) -> Image:
         pass
+
+from .openai import AzureOpenAILLM
+from .gemini import GeminiLLM
+
+def get_llm(model) -> LLMInterface:
+    # check if the model is supported using a capitalized name
+    model = model.upper()
+    if model == "OPENAI":
+        return AzureOpenAILLM()
+    elif model == "GEMINI" or model is None:
+        return GeminiLLM()
+    raise NotImplementedError(f"Model {model} not supported.")

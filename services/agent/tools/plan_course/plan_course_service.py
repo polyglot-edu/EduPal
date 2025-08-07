@@ -1,22 +1,8 @@
-from google import genai
-from dotenv import load_dotenv
+from services.llm_integration.llm_interface import get_llm
 from .plan_course_utils import PlanCourseRequest, PlanCourseResponse, CoursePlan, plan_course_prompt
-from ....llm_integration.gemini import GeminiLLM
-import os
-
-load_dotenv()
-API_KEY = os.getenv("GEMINI_API_KEY", "")
-
-client = genai.Client(api_key=API_KEY)
 
 def course_plan(request: PlanCourseRequest):
-    model = request.model
-    if model is None:
-        model = "GEMINI"
-    if model.capitalize() == "GEMINI":
-        llm = GeminiLLM()
-    else:
-        llm = GeminiLLM()
+    llm = get_llm(request.model)
     try:
         response: PlanCourseResponse = llm.generate_text(prompt=plan_course_prompt(request), response_model=PlanCourseResponse)
         #print("Response",response)

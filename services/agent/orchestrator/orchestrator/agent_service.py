@@ -4,13 +4,12 @@ from bs4 import BeautifulSoup
 from services.agent.grounding.analyse_material.analyse_material_service import extract_web_content
 from services.agent.grounding.vector_search_retrieval.vector_search_service import query_OERs, query_documents_with_filter
 from services.agent.grounding.vector_search_retrieval.vector_search_utils import VectorSearchResults
+from services.llm_integration.llm_interface import get_llm
 
 from .agent_utils import GroundingSteps, OERs_grounding_prompt, OERsGroundingResponse, UserGroundingRequest, UserGroundingResponse, WebGroundingResponse, WebSearchResults, user_resources_grounding_prompt, web_grounding_prompt, websites_selection_prompt
-from ..chat.chat_utils import Message, ResourceDocumentSimplified
+from ..chat.chat_utils import ResourceDocumentSimplified
 from typing import List, Tuple
 from motor.motor_asyncio import AsyncIOMotorCollection
-
-from services.llm_integration.gemini import GeminiLLM
 
 GOOGLE_SEARCH_API_KEY = os.getenv("GOOGLE_SEARCH_API_KEY", "YOUR_GOOGLE_API_KEY")
 GOOGLE_CSE_ID = os.getenv("GOOGLE_CSE_ID", "YOUR_CUSTOM_SEARCH_ENGINE_ID")
@@ -68,12 +67,8 @@ async def ground_response(user_collection: AsyncIOMotorCollection, chat_id, sour
     Grounds the query using the provided resources.
     """
     # Define the LLM object
-    if model is None:
-        model = "GEMINI"
-    if model.upper() == "GEMINI":
-        llm = GeminiLLM()
-    else:
-        llm = GeminiLLM()
+    llm = get_llm(model)
+
     queries = queries.split('\n')
     grounded_material = ""
 
@@ -199,48 +194,3 @@ async def ground_response(user_collection: AsyncIOMotorCollection, chat_id, sour
     #print(f"Grounded material: {grounded_material[:100]}")
 
     return grounded_material
-
-
-
-
-
-def grounding_to_string(grounding: List[str]) -> str:
-    """
-    Converts the grounded material to a string format.
-    """
-    # Placeholder for the actual implementation
-    return "Grounded material string"
-
-def tool_call(tool_name: str, tool_parameters: dict) -> str:
-    """
-    Calls a tool and returns the response.
-    """
-    # Placeholder for the actual implementation
-    return "Tool response"
-
-def map_response_to_message(response: str) -> Message:
-    """
-    Maps the response from the LLM to a Message object.
-    """
-    # Placeholder for the actual implementation
-    return Message(
-        role="assistant",
-        content=response,
-        timestamp=None,
-        in_memory=False,
-        resources=[]
-    )
-
-def plan_next_message(action: str) -> Message:
-    """
-    Plans the next message based on the action.
-    """
-    # Placeholder for the actual implementation
-    return Message(
-        role="assistant",
-        content="Next message content",
-        timestamp=None,
-        in_memory=False,
-        resources=[]
-    )
-

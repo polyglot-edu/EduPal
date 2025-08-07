@@ -1,3 +1,4 @@
+import enum
 from pydantic import BaseModel
 from ...utils.common_enums import EducationLevel, LearningOutcome
 from ..plan_lesson.plan_lesson_utils import Topic
@@ -12,6 +13,11 @@ class LessonNode(BaseModel):
         topics_and_explanations = [f"{topic.topic} - {topic.explanation};" for topic in self.topics]
         return f"{self.title} ({self.learning_outcome.value}): {', '.join(topics_and_explanations)}"
 
+class MaterialType(enum.Enum):
+    MARKDOWN = "md"
+    PDF = "pdf"
+    DOCX = "docx"
+
 class GenerateMaterialRequest(BaseModel):
     title: str
     macro_subject: str
@@ -21,19 +27,11 @@ class GenerateMaterialRequest(BaseModel):
     duration: int
     language: str = "English"
     model: str = "Gemini"
+    type_of_file: MaterialType = MaterialType.MARKDOWN
 
 class GenerateMaterialResponse(BaseModel):
     material: str
 
-class Material(BaseModel):
-    title: str
-    macro_subject: str
-    topics: list[LessonNode]
-    education_level: EducationLevel
-    learning_outcome: LearningOutcome
-    duration: int
-    material: str
-    language: str = "English"
 
 def generate_material_prompt(request: GenerateMaterialRequest):
    topics_str = "\n".join([f"- {topic.toStr()}" for topic in request.topics])
@@ -51,6 +49,7 @@ These are the ordered topics you will cover:
 
 Now you can generate the material (in {request.language}), considering that it should be fully explainable in approximate {request.duration} minutes.
 Remember to use appropriate vocabulary and complexity for a {request.education_level.value} audience and to adjust the depth of the topics acccordingly to the desired learning outcome.
+Write the material in mardown format, using appropriate headings, subheadings and style formatting to organize the content and make it engaging and easy to read.
 """
    return prompt
 
@@ -96,7 +95,8 @@ Remember to use appropriate vocabulary and complexity for a {request.education_l
   "learning_outcome": "the ability to recall or recognize simple facts and definitions",
   "duration": 100,
   "language": "English",
-  "model": "gemini"
+  "model": "gemini",
+  "type_of_file": "md"
 }
 """
 

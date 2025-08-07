@@ -10,7 +10,7 @@ from motor.motor_asyncio import AsyncIOMotorCollection
 from mcp_server import call_tool
 from services.agent.orchestrator.orchestrator.agent_service import ground_response
 from services.agent.orchestrator.orchestrator.agent_utils import EXIT_GROUNDING_STRING, RefiningResponse, refining_prompt
-from services.llm_integration.gemini import GeminiLLM
+from services.llm_integration.llm_interface import get_llm
 from .chat_utils import Resource, ResourceDocumentSimplified, SendMessageRequest, State, UpdateChatRequest, UpdateStructuredMemoryRequest, UpdateStructuredMemoryResponse, Memory, Message, update_structured_memory_prompt
 from services.auth.auth_service import get_personal_info
 import logging
@@ -275,12 +275,7 @@ def update_structured_memory(request: UpdateStructuredMemoryRequest):
     Update the memory of the chat document
     """
     model = request.model
-    if model is None:
-        model = "GEMINI"
-    if model.capitalize() == "GEMINI":
-        llm = GeminiLLM()
-    else:
-        llm = GeminiLLM()
+    llm = get_llm(model.capitalize())
     try:
         response: UpdateStructuredMemoryResponse = llm.generate_text(prompt=update_structured_memory_prompt(request), response_model=UpdateStructuredMemoryResponse)
     except Exception as e:
@@ -405,10 +400,7 @@ async def send_message(request: SendMessageRequest, user_collection: AsyncIOMoto
         user_message = request.message
         messages = [user_message]
         # Answer the message using the LLM
-        if request.model.upper() == "GEMINI" or request.model is None:
-            llm = GeminiLLM()
-        else:
-            llm = GeminiLLM()
+        llm = get_llm(request.model)
  
         ##print(f"Message: {request.message.content}")
         ##print(f"Memory: {request.memory.to_str()}")

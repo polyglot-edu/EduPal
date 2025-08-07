@@ -1,6 +1,6 @@
 from PIL.Image import Image
-from google import genai
-from dotenv import load_dotenv
+
+from services.llm_integration.llm_interface import get_llm
 from .analyse_material_utils import AnalyseMaterialRequest, AnalyseMaterialResponse, Analysis, analyse_material_prompt, analyse_image_prompt, Topic
 from ....llm_integration.gemini import GeminiLLM
 import os
@@ -23,11 +23,6 @@ from pdf2image import convert_from_path
 import requests
 from bs4 import BeautifulSoup
 import yt_dlp
-
-load_dotenv()
-API_KEY = os.getenv("GEMINI_API_KEY", "")
-
-client = genai.Client(api_key=API_KEY)
 
 # --- Helper Functions ---
 def is_url(text: str) -> bool:
@@ -424,13 +419,7 @@ def merge_analysis_responses(responses: List[AnalyseMaterialResponse]) -> Analys
 
 # --- Main Function ---
 def analysis(request: AnalyseMaterialRequest) -> Analysis:
-    model = request.model
-    if model is None:
-        model = "GEMINI"
-    if model.capitalize() == "GEMINI":
-        llm = GeminiLLM()
-    else:
-        llm = GeminiLLM()
+    llm = get_llm(request.model)
 
     try:
         # 1. Get text content from source (file, URL, or direct text)

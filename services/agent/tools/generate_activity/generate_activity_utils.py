@@ -1,6 +1,13 @@
 from pydantic import BaseModel
+
 from ...utils.common_enums import EducationLevel, LearningOutcome, TypeOfActivity
 from pydantic import BaseModel
+
+class ActivityParams(BaseModel):
+    type: TypeOfActivity
+    solutions_number: int
+    distractors_number: int
+    easily_discardable_distractors_number: int
 
 class ActivityUtils(BaseModel):
     goal: str # "assess if the audience achieved " / "help the audience achieve "
@@ -16,14 +23,11 @@ class GenerateActivityRequest(BaseModel):
     education_level: EducationLevel
     learning_outcome: LearningOutcome
     material: str
-    solutions_number: int
-    distractors_number: int
-    easily_discardable_distractors_number: int
-    type: TypeOfActivity
+    params: list[ActivityParams]
     language: str = "English"
     model: str = "Gemini"
 
-class GenerateActivityResponse(BaseModel):
+class GeneratedActivity(BaseModel):
     assignment: str
     plus: str
     solutions: list[str]
@@ -37,33 +41,37 @@ class Activity(BaseModel):
     education_level: EducationLevel
     learning_outcome: LearningOutcome
     material: str
-    assignment: str
-    plus: str
-    solutions: list[str]
-    distractors: list[str]
-    easily_discardable_distractors: list[str]
-    type: TypeOfActivity
+    params: list[ActivityParams]
+    generated_activities: list[GeneratedActivity]
     language: str = "English"
+    model: str = "Gemini"
 
 def generate_activity_prompt(request: GenerateActivityRequest):
    
-   activity_utils: ActivityUtils = get_activity_utils(request.type, request.solutions_number, request.distractors_number, request.easily_discardable_distractors_number)
+   activity_utils_list: list[ActivityUtils] = [get_activity_utils(activity.type, activity.solutions_number, activity.distractors_number, activity.easily_discardable_distractors_number) for activity in request.params]
+   
+   activity_utils_strings = []
+   for activity_util in activity_utils_list: activity_utils_strings.append(f"""
+    The **main goal** of this one is to {activity_util.goal} **'{request.learning_outcome.value}'** on the topic.
+
+    ### Activity Structure
+    Since you are highly organized, you will follow a structured approach to craft the activity. 
+    1. **Assignment**: A concise and explanatory description of what the audience is expected to do.
+    2. **Plus**: {activity_util.plus}.
+    3. **Solution**: {activity_util.solution}.
+    4. **Distractors**: {activity_util.distractors}.
+    5. **Easily Discardable Distractors**: {activity_util.easily_discardable_distractors}.
+""" )
+          
    prompt = f"""You are an {request.language} expert educator and instructional designer specialized in {request.macro_subject}. 
 Your expertise lies in creating **structured, engaging, and pedagogically sound activities (including exercises, projects and in-class activities)**. 
 
 ### Task
-Your task is to generate an {request.type.value} for the topic: **'{request.topic}** - {request.topic_explanation}', ensuring it aligns with best teaching practices for a **{request.education_level.value}** audience.  
-The **main goal** is to {activity_utils.goal} **'{request.learning_outcome.value}'** on the topic.
+Your task is to generate a set of activities/exercises for the topic: **'{request.topic}** - {request.topic_explanation}', ensuring it aligns with best teaching practices for a **{request.education_level.value}** audience.  
+These are the activities you need to generate:
+{''.join(activity_utils_strings)}
 
-### Activity Structure
-Since you are highly organized, you will follow a structured approach to craft the activity. 
-1. **Assignment**: A concise and explanatory description of what the audience is expected to do.
-2. **Plus**: {activity_utils.plus}.
-3. **Solution**: {activity_utils.solution}.
-4. **Distractors**: {activity_utils.distractors}.
-5. **Easily Discardable Distractors**: {activity_utils.easily_discardable_distractors}.
-
-Now you can generate the activity (in {request.language}).
+Now you can generate the activities (in {request.language}).
 Remember to tune the difficulty for a {request.education_level.value} audience, so don't make it too easy, or the audience will be bored. 
 Also adjust the depth of the topics acccordingly to the desired learning outcome.
 """
@@ -241,18 +249,28 @@ def get_activity_utils(activity_type: TypeOfActivity, solutions_number: int, dis
 
 """Test text:
 {
-  "macro_subject": "History",
-  "topic": "The Fall of the Western Roman Empire",
-  "topic_explanation": "no explanation needed",
-  "education_level": "high school",
-  "learning_outcome": "the ability to recall or recognize simple facts and definitions",
-  "material": "a short text describing the reasons for the fall of Rome",
-  "solutions_number": 3,
-  "distractors_number": 4,
-  "easily_discardable_distractors_number": 2,
-  "type": "brainstorming",
+  "macro_subject": "Storia",
+  "topic": "La caduta dell'Impero Romano",
+  "topic_explanation": "Analisi delle cause e delle conseguenze della caduta dell'Impero Romano d'Occidente nel 476 d.C.",
+  "education_level": "middle school",
+  "learning_outcome": "the ability to explain concepts and principles, and recognize how different ideas are related",
+  "material": "INSTRUCTIONS FOR LLM: Use your internal knowledge",
+  "params": [
+    {
+      "type": "multiple choice",
+      "solutions_number": 1,
+      "distractors_number": 2,
+      "easily_discardable_distractors_number": 1
+    },
+    {
+      "type": "true or false",
+      "solutions_number": 1,
+      "distractors_number": 1,
+      "easily_discardable_distractors_number": 1
+    }
+  ],
   "language": "Italian",
-  "model": "gemini"
+  "model": "Gemini"
 }
 """
 

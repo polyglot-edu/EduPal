@@ -99,11 +99,17 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
 
 
 
-
 async def run_mcp_server():
-    """Run the MCP server (used in main.py)"""
-    async with stdio_server() as (read_stream, write_stream):
-        await server.run(read_stream, write_stream, server.create_initialization_options())
+    try:
+        async with stdio_server() as (read_stream, write_stream):
+            task = asyncio.create_task(
+                server.run(read_stream, write_stream, server.create_initialization_options())
+            )
+            # Await task, respond to cancellation
+            await task
+    except asyncio.CancelledError:
+        print("run_mcp_server cancelled")
+        raise
 
 if __name__ == "__main__":
     asyncio.run(run_mcp_server())

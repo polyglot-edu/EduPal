@@ -68,6 +68,21 @@ class TypeOfActivity(Enum):
     #FLOWCHARTS = "flowcharts"
     #TIMELINES = "timelines"
 
+def get_exercises() -> list[TypeOfActivity]:
+    # Returns a list of types of activity
+    exercises = [
+        TypeOfActivity.OPEN_QUESTION,
+        TypeOfActivity.SHORT_ANSWER_QUESTION,
+        TypeOfActivity.TRUE_OR_FALSE,
+        TypeOfActivity.FILL_IN_THE_BLANKS,
+        TypeOfActivity.MATCHING,
+        TypeOfActivity.ORDERING,
+        TypeOfActivity.MULTIPLE_CHOICE,
+        TypeOfActivity.MULTIPLE_SELECT
+    ]
+    return exercises
+
+
 class TypeOfAssessment(Enum):
     PEER_REVIEW = "peer review"
     SELF_ASSESSMENT = "self assessment"
