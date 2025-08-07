@@ -101,7 +101,7 @@ async def create_test(request: GenerateTestRequest):
             #print("Response",response)
             #print("-"*100)
             if response is not None:
-                print(response)
+                #print(response)
                 final_act = Activity(
                     macro_subject=single_request.macro_subject,
                     topic=single_request.topic,

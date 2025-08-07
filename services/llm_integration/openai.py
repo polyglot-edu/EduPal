@@ -111,7 +111,7 @@ class AzureOpenAILLM(LLMInterface):
                 
                 # validate using model_validate, not model_validate_json
                 parsed = wrapper_model.model_validate(output)
-                print(f"Parsed output: {parsed}")
+                #print(f"Parsed output: {parsed}")
 
                 # Fix: Properly handle RootModel unwrapping
                 if is_list_response:
@@ -129,7 +129,7 @@ class AzureOpenAILLM(LLMInterface):
             return output
 
         except Exception as e:
-            print(f"Error generating text: {e}")
+            #print(f"Error generating text: {e}")
             return str(e)
     def generate_image(self, prompt: str) -> Image.Image:
         gen = self.client.images.generate(
