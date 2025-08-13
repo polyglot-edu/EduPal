@@ -10,10 +10,10 @@ from typing import Any, Dict, List, Tuple, Optional
 from motor.motor_asyncio import AsyncIOMotorCollection
 
 import numpy as np
-from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_huggingface import HuggingFaceEmbeddings
+from sentence_transformers import SentenceTransformer
 
 from services.agent.grounding.analyse_material.analyse_material_service import analysis, get_text_from_source
 from services.agent.grounding.analyse_material.analyse_material_utils import AnalyseMaterialRequest, Analysis
@@ -133,23 +133,21 @@ def compute_similarities(embeddings: List[List[float]]) -> Tuple[List[float], fl
     avg_inter_similarity: float = float(np.mean(similarities))
     return similarities, avg_inter_similarity
 
-def iterative_merging(chunks: List[Tuple[str, Dict[str, int]]], model_name: str = "sentence-transformers/all-mpnet-base-v2") -> List[Tuple[str, Dict[str, int]]]:
+def iterative_merging(chunks: List[Tuple[str, Dict[str, int]]]) -> List[Tuple[str, Dict[str, int]]]:
     """
     Perform iterative merging of text chunks based on semantic similarity until dissimilarity stops improving.
 
     Args:
         chunks (List[Tuple[str, Dict[str, int]]]): 
             List of tuples containing text chunks and their metadata (must include 'page' key).
-        model_name (str, optional): 
-            Name of the SentenceTransformer model to use for embeddings.
 
     Returns:
         List[Tuple[str, Dict[str, int]]]: 
             Merged chunks after iterative similarity-based grouping.
     """
+    model =  SentenceTransformer("sentence-transformers/all-mpnet-base-v2")
     # Extract text for embedding
     texts: List[str] = [chunk[0] for chunk in chunks]
-    model = SentenceTransformer(model_name)
     embeddings: np.ndarray = model.encode(texts, convert_to_numpy=True)
     similarities, avg_inter_similarity = compute_similarities(embeddings)
     #print("Initial average inter chunk similarity:", avg_inter_similarity)
@@ -393,18 +391,22 @@ async def check_file(file: Optional[UploadFile] = File(None), url: Optional[str]
         # Check extension
         _, ext = os.path.splitext(file.filename)
         if ext.lower() not in ALLOWED_EXTENSIONS:
+            logger.error(f"Error: File extension '{ext}' is not allowed.")
             return f"Error: File extension '{ext}' is not allowed."
 
         # Sanitize filename to avoid path traversal etc.
         safe_filename = os.path.basename(file.filename)
         save_path = os.path.join(TEMP_FOLDER, safe_filename)
+        logger.info(f"Saving file to {save_path}")
 
         try:
             # Save file asynchronously
             async with aiofiles.open(save_path, 'wb') as out_file:
                 content = await file.read()
                 await out_file.write(content)
+                logger.info(f"File saved to {save_path}")
         except Exception as e:
+            logger.error(f"Error: Failed to save file. {str(e)}")
             return f"Error: Failed to save file. {str(e)}"
 
         return save_path
@@ -437,9 +439,13 @@ async def upload(
     url: Optional[str] = Form(None)
 ):
     """
-    Upload a file (by path) and perform semantic chunking.
+    Upload a file and perform semantic chunking.
     """
     try: 
+        analysed_material = analysis(model=model, file=file, url=url) 
+        #print(f"Analyzed material: {analysed_material}")
+        analysis_dict = jsonable_encoder(analysed_material)
+
         # Upload the material to the server and check if it's safe
         if file is not None and file.filename != "":
             logger.info(f"Received file: {file.filename}")
@@ -452,10 +458,6 @@ async def upload(
         file_path: str = await check_file(file=file if file else None, url=url if url else None)
         # Analize the material
         url = file_path
-        analyze_material_request = AnalyseMaterialRequest(text=url, model=model)
-        analysed_material = analysis(analyze_material_request) 
-        #print(f"Analyzed material: {analysed_material}")
-        analysis_dict = jsonable_encoder(analysed_material)
 
         # Perform semantic chunking
         chunks = semantic_chunking(file_path)

@@ -31,6 +31,7 @@ async def generate_material( request: GenerateMaterialRequest, access_key: str =
     - **duration** _(int)_: the duration of the material
     - **language** _(str)_: the language of the material, defaults to English
     - **model** _(str)_: the model to use, defaults to Gemini
+    - **type_of_file** _(MaterialType)_: the type of the file, defaults to markdown
 
     Generate educational material and return it as a downloadable file (.md, .pdf, or .docx).
     """

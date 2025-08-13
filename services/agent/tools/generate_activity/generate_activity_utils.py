@@ -28,6 +28,7 @@ class GenerateActivityRequest(BaseModel):
     model: str = "Gemini"
 
 class GeneratedActivity(BaseModel):
+    type: TypeOfActivity
     assignment: str
     plus: str
     solutions: list[str]
@@ -67,11 +68,11 @@ def generate_activity_prompt(request: GenerateActivityRequest):
 Your expertise lies in creating **structured, engaging, and pedagogically sound activities (including exercises, projects and in-class activities)**. 
 
 ### Task
-Your task is to generate a set of activities/exercises for the topic: **'{request.topic}** - {request.topic_explanation}', ensuring it aligns with best teaching practices for a **{request.education_level.value}** audience.  
+Your task is to generate a set of {len(request.params)} activities/exercises for the topic: **'{request.topic}** - {request.topic_explanation}', ensuring it aligns with best teaching practices for a **{request.education_level.value}** audience.  
 These are the activities you need to generate:
 {''.join(activity_utils_strings)}
 
-Now you can generate the activities (in {request.language}).
+Now you can generate the {len(request.params)} activities (in {request.language}).
 Remember to tune the difficulty for a {request.education_level.value} audience, so don't make it too easy, or the audience will be bored. 
 Also adjust the depth of the topics acccordingly to the desired learning outcome.
 """

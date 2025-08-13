@@ -3,14 +3,11 @@ from fastapi.security import OAuth2PasswordBearer
 from datetime import datetime, timezone
 from typing import List, Dict, Optional
 from bson.errors import InvalidId
-from pydantic import BaseModel
 from bson import ObjectId
 import os
 from motor.motor_asyncio import AsyncIOMotorClient
 
-from services.agent.grounding.analyse_material.analyse_material_utils import AnalyseMaterialRequest, Analysis
 from .upload_service import upload
-from services.agent.grounding.analyse_material.analyse_material_utils import AnalyseMaterialRequest
 
 from .chat_utils import STUDENT_SYSTEM_INSTRUCTIONS, ChatDocumentSimplified, ChatDocument, Resource, ResourceDocumentSimplified, ResourceIdsRequest, SendMessageRequest, Message, Memory, ChatCreateRequest, State, UpdateChatRequest
 from .chat_service import delete_resources_by_ids, get_chat_info, get_chat_resources, get_complete_resources_by_ids, get_user_resources, update_chat_info, send_message
@@ -616,10 +613,13 @@ async def upload_file( chat_id: str, file: Optional[UploadFile] = File(None), ur
     access_key: str = Header(..., alias="access_key")
 ):
     """
-    Upload a file (by path) and perform semantic chunking.
+    Upload a file and perform semantic chunking.
 
-    - **file**: The path of the file to upload
+    - **file**: The file to upload
     - **db_name**: Database name
+
+    Returns:
+    - The ID of the uploaded file
     """
     try: 
         authenticate(access_key)

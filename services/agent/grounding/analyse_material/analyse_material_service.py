@@ -1,13 +1,16 @@
 from PIL.Image import Image
+from fastapi import UploadFile, File, Form
 
 from services.llm_integration.llm_interface import get_llm
 from .analyse_material_utils import AnalyseMaterialRequest, AnalyseMaterialResponse, Analysis, analyse_material_prompt, analyse_image_prompt, Topic
 from ....llm_integration.gemini import GeminiLLM
 import os
-from typing import List
+from typing import List, Optional
 from urllib.parse import urlparse, urlunparse, parse_qs
 import re
 from langchain_core.documents import Document
+import logging
+logger = logging.getLogger(__name__)
 
 # File Handling Libraries
 from pathlib import Path
@@ -418,12 +421,25 @@ def merge_analysis_responses(responses: List[AnalyseMaterialResponse]) -> Analys
     return merged_response
 
 # --- Main Function ---
-def analysis(request: AnalyseMaterialRequest) -> Analysis:
-    llm = get_llm(request.model)
+async def analysis(model: str, file: Optional[UploadFile] = File(None), url: Optional[str] = Form(None)) -> Analysis:
+    llm = get_llm(model)
+    from services.agent.orchestrator.chat.upload_service import check_file, delete_temp_file
 
     try:
+        if file is not None and file.filename != "":
+            logger.info(f"Received file: {file.filename}")
+            #print(f"Received file: {file.filename}")
+        elif url is not None and url != "":
+            logger.info(f"Received URL: {url}")
+            #print(f"Received URL: {url}")
+        else:
+            raise ValueError("No file or URL provided for upload.")
+        file_path: str = await check_file(file=file if file else None, url=url if url else None)
+        # Analize the material
+        url = file_path
+
         # 1. Get text content from source (file, URL, or direct text)
-        documents = get_text_from_source(request.text)
+        documents = get_text_from_source(url)
         text = extract_plain_text_from_documents(documents)
 
         # 2. Chunk the text
@@ -433,7 +449,7 @@ def analysis(request: AnalyseMaterialRequest) -> Analysis:
         responses: List[AnalyseMaterialResponse] = []
         for i, chunk in enumerate(chunks):
             #print(f"Processing chunk {i + 1}/{len(chunks)}...")
-            prompt = analyse_material_prompt(AnalyseMaterialRequest(text=chunk, model=request.model))
+            prompt = analyse_material_prompt(AnalyseMaterialRequest(text=chunk, model=model))
             response: AnalyseMaterialResponse = llm.generate_text(prompt=prompt, response_model=AnalyseMaterialResponse)
             #print(f"Chunk {i + 1} response: {response}")
             responses.append(response)
@@ -453,6 +469,10 @@ def analysis(request: AnalyseMaterialRequest) -> Analysis:
             prerequisites=final_response.prerequisites,
             estimated_duration=final_response.estimated_duration,
         )
+
+        # 6. Delete the temp_file
+        if file is not None and file.filename != "":
+            await delete_temp_file(file_path)
 
     except Exception as e:
         raise ValueError(f"Error during analysis: {str(e)}")

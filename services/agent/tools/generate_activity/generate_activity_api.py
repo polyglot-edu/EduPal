@@ -19,6 +19,7 @@ async def generate_activity( request: GenerateActivityRequest, access_key: str =
 
     - **macro_subject** _(str)_: the macro subject of the topic
     - **topic** _(str)_: the topic of the activity
+    - **topic_explanation** _(str)_: the explanation of the topic
     - **education_level** _(EducationLevel)_: the education level of the activity
     - **learning_outcome** _(LearningOutcome)_: the learning outcome of the activity
     - **material** _(str)_: the material to use for generating the activity
@@ -39,6 +40,7 @@ async def generate_activity( request: GenerateActivityRequest, access_key: str =
     - **material** _(str)_: the material to use for generating the activity
     - **params** _(list[ActivityParams])_: the parameters for the activity        
     - generated_activities _(list[GeneratedActivity])_: the generated activities based on the provided parameters:
+        - **type** _(TypeOfActivity)_: the type of the activity
         - **assignment** _(str)_: the assignment of the activity- **assignment** _(str)_: the assignment of the activity
         - **plus** _(str)_: the plus of the activity
         - **solutions** _(list[str])_: the solutions of the activity

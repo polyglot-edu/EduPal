@@ -1,4 +1,5 @@
 import json
+from typing import Optional
 from fastapi import APIRouter, FastAPI, File, Form, HTTPException, Header, UploadFile
 from common.auth import authenticate
 from .generate_test_service import create_test
@@ -15,7 +16,7 @@ router = APIRouter(
 )
 
 @router.post("/generate_test", response_model=list[Activity])
-async def generate_complete_test( material: UploadFile = File(...), data: str = Form(...), access_key: str = Header(...) ):
+async def generate_complete_test(access_key: str = Header(...), data: str = Form(...), material: Optional[UploadFile] = File(None) ):
     """
 Generate a complete test for a given set of topics based on:
 
@@ -50,6 +51,7 @@ Returns a list of JSON objects with the following fields:
 - **material** _(str)_: the material to use for generating the activity
 - **params** _(list[ActivityParams])_: the parameters for the activity        
 - generated_activities _(list[GeneratedActivity])_: the generated activities based on the provided parameters:
+    - **type** _(TypeOfActivity)_: the type of the activity
     - **assignment** _(str)_: the assignment of the activity- **assignment** _(str)_: the assignment of the activity
     - **plus** _(str)_: the plus of the activity
     - **solutions** _(list[str])_: the solutions of the activity

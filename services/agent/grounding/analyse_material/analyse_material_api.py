@@ -1,5 +1,7 @@
-from fastapi import APIRouter, FastAPI, HTTPException, Header
+from typing import Optional
+from fastapi import APIRouter, FastAPI, HTTPException, Header, File, Form, UploadFile
 from common.auth import authenticate
+from services.agent.orchestrator.chat.chat_api import upload_file
 from .analyse_material_service import analysis
 from .analyse_material_utils import AnalyseMaterialRequest, AnalyseMaterialResponse
 
@@ -13,12 +15,17 @@ router = APIRouter(
 )
 
 @router.post("/analyse_material", response_model=AnalyseMaterialResponse)
-async def analyse_material( request: AnalyseMaterialRequest, access_key: str = Header(...) ):
+async def analyse_material(
+    file: Optional[UploadFile] = File(None), url: Optional[str] = Form(None), model: str = Form(...), access_key: str = Header(...)
+):
     """
     Analyse a material and extract meaningful information. It's based on:
 
-    - **text** _(str)_: The text to analyse.
-    - **model** _(str)_: The model to use, default is "Gemini".
+    - **file** _(str)_: The file to analyse.
+    - **url** _(str)_: The URL of the file to analyse.
+    - **model** _(str)_: The model to use for the analysis, default is "Gemini".
+
+    NB: please upload either a file or an url; if both are uploaded, only the file will be considered
 
     Returns a JSON object with the following fields:
 
@@ -38,7 +45,7 @@ async def analyse_material( request: AnalyseMaterialRequest, access_key: str = H
     try: 
         authenticate(access_key)
 
-        result = analysis(request)
+        result = await analysis(file=file, url=url, model=model)
 
     except Exception as e:
         if hasattr(e, "status_code"):
