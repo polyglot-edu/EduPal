@@ -4,7 +4,7 @@ from mcp.server import Server
 from mcp.server.stdio import stdio_server
 from mcp.types import Tool, TextContent
 
-from services.agent.utils.common_enums import EducationLevel, TextStyle, LearningOutcome, TypeOfActivity, TypeOfAssessment, ActionType, resolve_enum, sanitize_enums
+from services.agent.utils.common_enums import EducationLevel, TextStyle, LearningOutcome, TypeOfActivity, TypeOfAssessment, ActionType, sanitize_enums
 
 # Create server instance
 server = Server("fastapi-mcp-server")
@@ -98,18 +98,27 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
         raise ValueError(f"Unknown tool: {name}")
 
 
-
 async def run_mcp_server():
     import logging
     logger = logging.getLogger(__name__)
-
+    
     try:
+        logger.info("Starting MCP server...")
+        
         async with stdio_server() as (read_stream, write_stream):
-            task = asyncio.create_task(
-                server.run(read_stream, write_stream, server.create_initialization_options())
-            )
-            await task
+            logger.info("MCP server connected")
+            
+            # This will run until cancelled or an error occurs
+            await server.run(read_stream, write_stream, server.create_initialization_options())
+            
     except asyncio.CancelledError:
-        logger.info("MCP server cancelled")
-        # Clean up any resources here if needed
+        logger.info("MCP server cancelled gracefully")
         return
+        
+    except Exception as e:
+        logger.error(f"MCP server error: {e}")
+        # Don't re-raise - let the thread handle it
+        return
+    
+    finally:
+        logger.info("MCP server stopped")

@@ -1,4 +1,4 @@
-import enum
+from  enum import Enum
 from pydantic import BaseModel
 from ...utils.common_enums import EducationLevel, LearningOutcome
 from ..plan_lesson.plan_lesson_utils import Topic
@@ -13,7 +13,7 @@ class LessonNode(BaseModel):
         topics_and_explanations = [f"{topic.topic} - {topic.explanation};" for topic in self.topics]
         return f"{self.title} ({self.learning_outcome.value}): {', '.join(topics_and_explanations)}"
 
-class MaterialType(enum.Enum):
+class MaterialType(Enum):
     MARKDOWN = "md"
     PDF = "pdf"
     DOCX = "docx"

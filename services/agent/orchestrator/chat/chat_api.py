@@ -58,6 +58,7 @@ async def chatlist(
 
         # Validate token and get username
         username, _, _ = await validate_token(db, token, SECRET_KEY, ALGORITHM)
+        #print(username)
 
         # Retrieve chat documents from the user's collection
         user_collection = db[username]

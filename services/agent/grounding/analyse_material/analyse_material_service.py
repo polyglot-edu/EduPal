@@ -434,12 +434,14 @@ async def analysis(model: str, file: Optional[UploadFile] = File(None), url: Opt
             #print(f"Received URL: {url}")
         else:
             raise ValueError("No file or URL provided for upload.")
+        # Save temp file
         file_path: str = await check_file(file=file if file else None, url=url if url else None)
         # Analize the material
         url = file_path
 
         # 1. Get text content from source (file, URL, or direct text)
         documents = get_text_from_source(url)
+
         text = extract_plain_text_from_documents(documents)
 
         # 2. Chunk the text
@@ -469,10 +471,6 @@ async def analysis(model: str, file: Optional[UploadFile] = File(None), url: Opt
             prerequisites=final_response.prerequisites,
             estimated_duration=final_response.estimated_duration,
         )
-
-        # 6. Delete the temp_file
-        if file is not None and file.filename != "":
-            await delete_temp_file(file_path)
 
     except Exception as e:
         raise ValueError(f"Error during analysis: {str(e)}")

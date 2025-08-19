@@ -16,8 +16,10 @@ from langchain_huggingface import HuggingFaceEmbeddings
 from sentence_transformers import SentenceTransformer
 
 from services.agent.grounding.analyse_material.analyse_material_service import analysis, get_text_from_source
-from services.agent.grounding.analyse_material.analyse_material_utils import AnalyseMaterialRequest, Analysis
+from services.agent.grounding.analyse_material.analyse_material_utils import Analysis
 from services.agent.orchestrator.chat.chat_utils import Resource
+import logging
+logger = logging.getLogger(__name__)
 
 import logging
 logger = logging.getLogger(__name__)
@@ -25,8 +27,15 @@ logger = logging.getLogger(__name__)
 MAX_DOC_SIZE = 16 * 1024 * 1024  # 16MB limit in bytes
 SAFETY_MARGIN = 10000  # some extra bytes to prevent close overflows
 TEMP_FOLDER = "temp_files" # Folder to store temporary files
-ALLOWED_EXTENSIONS = {".txt", ".pdf", ".docx", "pptx", ".png", ".jpg", ".jpeg"} # Allowed file extensions
 
+# Allow common document formats
+ALLOWED_EXTENSIONS = {
+    ".pdf", ".docx", ".doc", ".txt", ".md",
+    ".pptx", ".ppt", ".xlsx", ".xls",
+    ".odt", ".ods", ".odp", ".rtf"
+}
+
+os.makedirs(TEMP_FOLDER, exist_ok=True)
 
 def clean_text(text):
     """Replace newlines with spaces unless they indicate a paragraph break."""
@@ -391,22 +400,19 @@ async def check_file(file: Optional[UploadFile] = File(None), url: Optional[str]
         # Check extension
         _, ext = os.path.splitext(file.filename)
         if ext.lower() not in ALLOWED_EXTENSIONS:
-            logger.error(f"Error: File extension '{ext}' is not allowed.")
             return f"Error: File extension '{ext}' is not allowed."
 
-        # Sanitize filename to avoid path traversal etc.
+        # Sanitize filename
         safe_filename = os.path.basename(file.filename)
         save_path = os.path.join(TEMP_FOLDER, safe_filename)
-        logger.info(f"Saving file to {save_path}")
 
         try:
-            # Save file asynchronously
+            # Save file asynchronously in chunks (prevents corruption)
             async with aiofiles.open(save_path, 'wb') as out_file:
-                content = await file.read()
-                await out_file.write(content)
-                logger.info(f"File saved to {save_path}")
+                while chunk := await file.read(1024 * 1024):  # 1MB chunks
+                    await out_file.write(chunk)
+            await file.close()  # ensure file stream is closed
         except Exception as e:
-            logger.error(f"Error: Failed to save file. {str(e)}")
             return f"Error: Failed to save file. {str(e)}"
 
         return save_path
@@ -416,21 +422,22 @@ async def check_file(file: Optional[UploadFile] = File(None), url: Optional[str]
         # Basic URL validation
         if not URL_REGEX.match(url):
             return "Error: Invalid or potentially unsafe URL."
-
-        # Further validation can be added (like domain whitelisting)
         return url
 
-    # This should not happen
     return "Error: Unknown error occurred."
 
-async def delete_temp_file(file_path: str):
-    if os.path.exists(file_path):
-        # Since os.remove is sync, run it in a thread to avoid blocking
-        loop = asyncio.get_event_loop()
-        await loop.run_in_executor(None, os.remove, file_path)
-        return f"Deleted file {file_path}"
-    else:
-        return f"File {file_path} does not exist"
+
+async def delete_temp_file(path: str):
+    try:
+        if os.path.exists(path):
+            os.remove(path)
+            # Wait until file really disappears (in case OS is slow)
+            while os.path.exists(path):
+                await asyncio.sleep(0.05)
+        return True
+    except Exception as e:
+        logger.error(f"Failed to delete temp file {path}: {str(e)}")
+        return False
 
 async def upload(
     collection: AsyncIOMotorCollection,
@@ -441,43 +448,47 @@ async def upload(
     """
     Upload a file and perform semantic chunking.
     """
-    try: 
-        analysed_material = analysis(model=model, file=file, url=url) 
-        #print(f"Analyzed material: {analysed_material}")
-        analysis_dict = jsonable_encoder(analysed_material)
+    try:      
+        # Analyse the material
+        analysed_material = await analysis(model=model, file=file, url=url) 
+        #print(f"Analyzed material")
 
-        # Upload the material to the server and check if it's safe
         if file is not None and file.filename != "":
             logger.info(f"Received file: {file.filename}")
+            url = os.path.join(TEMP_FOLDER, file.filename)
             #print(f"Received file: {file.filename}")
         elif url is not None and url != "":
             logger.info(f"Received URL: {url}")
             #print(f"Received URL: {url}")
         else:
             raise ValueError("No file or URL provided for upload.")
-        file_path: str = await check_file(file=file if file else None, url=url if url else None)
-        # Analize the material
-        url = file_path
+        url
 
         # Perform semantic chunking
-        chunks = semantic_chunking(file_path)
+        chunks = semantic_chunking(url)
+        #print(f"Semantic chunking done")
 
         # Split into MongoDB documents
-        documents: List[Resource] = split_into_mongo_documents(analysis_dict, chunks)
-
+        documents: List[Resource] = split_into_mongo_documents(analysed_material, chunks)
+        #print(f"Split into MongoDB documents")
+        
         documents_dicts = []
 
         for resource in documents:
             # Convert Resource to dict and remove any None values
             chat_doc_dict = jsonable_encoder(resource, exclude_none=True)
             documents_dicts.append(chat_doc_dict)
+            #print(f"Chat doc dict added")
         
         # Insert documents into collection
         result = await collection.insert_many([resource for resource in documents_dicts])
 
         # Delete the temp_file if it was uploaded
         if file is not None and file.filename != "":
-            await delete_temp_file(file_path)
+            deleted = await delete_temp_file(url)
+            if deleted:
+                logger.info(f"Deleted temp file: {url}")
+                #print(f"Deleted temp file: {url}")
     
         if result.inserted_ids:
             #print(f"Inserted {len(result.inserted_ids)} documents into MongoDB.")

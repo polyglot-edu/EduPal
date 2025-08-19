@@ -3,7 +3,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import importlib
 import asyncio
-from contextlib import asynccontextmanager, suppress
+import threading
+from contextlib import asynccontextmanager
 from mcp_server import run_mcp_server
 from dotenv import load_dotenv
 from services.auth.auth_api import router as auth_router
@@ -12,6 +13,8 @@ from services.database_management.OERs_api import router as OERs_router
 from services.agent.grounding.vector_search_retrieval.vector_search_api import router as vector_search_router
 from services.agent.grounding.analyse_material.analyse_material_api import router as analyse_material_router
 import logging
+import atexit
+import os
 
 logger = logging.getLogger(__name__)
 load_dotenv()
@@ -30,36 +33,84 @@ services = [
     "services.agent.tools.generate_test.generate_test_api",
 ]
 
+# Global MCP server management
+_mcp_thread = None
+_mcp_loop = None
+_mcp_task = None
+
+def run_mcp_in_thread():
+    """Run MCP server in its own event loop in a separate thread"""
+    global _mcp_loop, _mcp_task
+    
+    # Create a new event loop for this thread
+    _mcp_loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(_mcp_loop)
+    
+    try:
+        # Start the MCP server
+        _mcp_task = _mcp_loop.create_task(run_mcp_server())
+        logger.info("MCP server started in separate thread")
+        
+        # Run the event loop
+        _mcp_loop.run_until_complete(_mcp_task)
+    except Exception as e:
+        logger.error(f"MCP server error: {e}")
+    finally:
+        logger.info("MCP server thread ending")
+
+def start_persistent_mcp_server():
+    """Start MCP server in a separate thread that persists across reloads"""
+    global _mcp_thread
+    
+    # Check if MCP server is already running
+    if _mcp_thread and _mcp_thread.is_alive():
+        logger.info("MCP server already running")
+        return
+    
+    # Start MCP server in a daemon thread
+    _mcp_thread = threading.Thread(target=run_mcp_in_thread, daemon=True)
+    _mcp_thread.start()
+    logger.info("MCP server thread started")
+
+def stop_mcp_server():
+    """Stop the MCP server gracefully"""
+    global _mcp_loop, _mcp_task, _mcp_thread
+    
+    if _mcp_task and _mcp_loop and not _mcp_task.done():
+        try:
+            # Schedule cancellation in the MCP loop
+            _mcp_loop.call_soon_threadsafe(_mcp_task.cancel)
+            logger.info("MCP server cancellation requested")
+        except Exception as e:
+            logger.error(f"Error cancelling MCP server: {e}")
+
+# Register cleanup function for process exit
+atexit.register(stop_mcp_server)
+
+# Start MCP server when module is imported
+# This happens once when uvicorn loads the module, not on every reload
+if not _mcp_thread or not _mcp_thread.is_alive():
+    start_persistent_mcp_server()
+
 # --------------------------
-# LIFESPAN: safe startup/shutdown
+# LIFESPAN: minimal startup/shutdown
 # --------------------------
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """
-    Start background tasks (MCP server) and ensure clean shutdown.
+    Minimal lifespan - MCP server runs independently
     """
-    tasks = []
-
-    # Start MCP server task
-    mcp_task = asyncio.create_task(run_mcp_server())
-    tasks.append(mcp_task)
-
+    logger.info("FastAPI starting up")
+    
+    # Ensure MCP server is running
+    if not _mcp_thread or not _mcp_thread.is_alive():
+        start_persistent_mcp_server()
+    
     try:
         yield  # FastAPI app is running
     finally:
-        # Cancel all tasks
-        for task in tasks:
-            task.cancel()
-
-        # Wait for graceful shutdown
-        for task in tasks:
-            with suppress(asyncio.CancelledError):
-                try:
-                    await asyncio.wait_for(task, timeout=3)
-                except asyncio.TimeoutError:
-                    logger.warning(f"Task {task.get_name()} did not shut down in time")
-
-        logger.info("All background tasks stopped cleanly")
+        logger.info("FastAPI shutting down")
+        # Don't stop MCP server on reload, only on process exit
 
 # --------------------------
 # FASTAPI APP
@@ -88,10 +139,20 @@ for router in [chat_router, auth_router, OERs_router, vector_search_router, anal
 # Root endpoint
 @app.get("/")
 async def root():
+    mcp_status = "running" if _mcp_thread and _mcp_thread.is_alive() else "stopped"
     return {
         "message": "Welcome to E4E API",
+        "mcp_server_status": mcp_status,
         "services": [service.split(".")[-1].replace("_api", "") for service in services],
         "docs_url": "/docs"
+    }
+
+# Health check endpoint
+@app.get("/health")
+async def health():
+    return {
+        "status": "ok",
+        "mcp_server_running": _mcp_thread and _mcp_thread.is_alive()
     }
 
 # Dynamically register service routers

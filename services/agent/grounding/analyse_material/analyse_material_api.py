@@ -1,9 +1,11 @@
+import os
 from typing import Optional
 from fastapi import APIRouter, FastAPI, HTTPException, Header, File, Form, UploadFile
 from common.auth import authenticate
-from services.agent.orchestrator.chat.chat_api import upload_file
 from .analyse_material_service import analysis
-from .analyse_material_utils import AnalyseMaterialRequest, AnalyseMaterialResponse
+from .analyse_material_utils import AnalyseMaterialResponse
+import logging
+logger = logging.getLogger(__name__)
 
 router = APIRouter(
     prefix="/tasks",
@@ -46,6 +48,15 @@ async def analyse_material(
         authenticate(access_key)
 
         result = await analysis(file=file, url=url, model=model)
+
+        # 1.1 Delete the temp_file
+        if file is not None and file.filename != "":
+            from services.agent.orchestrator.chat.upload_service import TEMP_FOLDER, delete_temp_file
+            url = os.path.join(TEMP_FOLDER, file.filename)
+            deleted = await delete_temp_file(url)
+            if deleted:
+                logger.info(f"Deleted temp file: {url}")
+                #print(f"Deleted temp file: {url}")
 
     except Exception as e:
         if hasattr(e, "status_code"):

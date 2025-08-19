@@ -1,3 +1,4 @@
+import base64
 import json
 import os
 import aiohttp
@@ -11,7 +12,7 @@ MODEL = "GEMINI"
 
 define_syllabus_tool = Tool(
     name="define_syllabus",
-    description="Defines a syllabus based on subject, education level, and additional information. Returns a structured syllabus with goals, topics, and prerequisites.",
+    description="Defines a syllabus based on subject, education level, and additional information. Returns a structured syllabus with goals, topics, and prerequisites. Useful for planning and designing long educational courses.",
     inputSchema={
         "type": "object",
         "properties": {
@@ -40,7 +41,7 @@ define_syllabus_tool = Tool(
 
 plan_course_tool = Tool(
     name="plan_course",
-    description="Plan an educational course based on a syllabus",
+    description="Plan an educational course. It can be based on a syllabus for long courses or created from scratch for small courses",
     inputSchema={
         "type": "object",
         "properties": {
@@ -164,7 +165,7 @@ plan_lesson_tool = Tool(
 
 generate_material_tool = Tool(
     name="generate_material",
-    description="Generate educational material for a given topic, it's meant to be used inside a single lesson or ",
+    description="Generate educational material for a given topic, it's meant to be used inside a single lesson or on explicit request, since it generates an actual file.",
     inputSchema={
         "type": "object",
         "properties": {
@@ -188,36 +189,39 @@ generate_material_tool = Tool(
                         },
                         "learning_outcome": {
                             "type": "string",
-                            "description": "the learning outcome of the activity"
+                            "description": "the learning outcome of the lesson node"
                         },
-                        "description": {
-                            "type": "string",
-                            "description": "a description of the activity"
-                        },
-                        "type": {
-                            "type": "string",
-                            "description": "the type of the activity"
+                        "topics": {
+                            "type": "array",
+                            "description": "A list of topics to be covered in the material.",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "topic": {
+                                        "type": "string",
+                                        "description": "brief contextualization of the topic"
+                                    },
+                                    "explanation": {
+                                        "type": "string",
+                                        "description": "a brief explanation of the topic and how it should be covered in the material"
+                                    }
+                                },
+                                "required": ["topic", "explanation"]
+                            }
                         }
                     }
                 }
+                
             },
             "education_level": {
                 "type": "string",
                 "description": "The education level of the target audience",
-                "enum": ["ELEMENTARY", "MIDDLE_SCHOOL", "HIGH_SCHOOL", "COLLEGE", "GRADUATE", "PROFESSIONAL"]
+                "enum": ["elementary", "moddle school", "high school", "college", "graduate", "professional"]
             },
             "learning_outcome": {
                 "type": "string",
-                "enum": [
-                  "DECLARATIVE",
-                  "UNDERSTANDING", 
-                  "PROCEDURAL",
-                  "METACOGNITIVE",
-                  "SCHEMATIC",
-                  "TRANSFORMATIVE"
-                ],
                 "description": "The type of learning outcome",
-                "enumDescriptions": [
+                "enum": [
                   "the ability to recall or recognize simple facts and definitions",
                   "the ability to explain concepts and principles, and recognize how different ideas are related", 
                   "the ability to apply knowledge and perform operations in practical contexts",
@@ -233,15 +237,29 @@ generate_material_tool = Tool(
             "language": {
                 "type": "string",
                 "description": "the language of the lesson, defaults to English"
+            },
+            "type_of_file": {
+                "type": "string",
+                "enum": [
+                  "md",
+                  "pdf", 
+                  "docx"
+                ],
+                "description": "The type of material to generate.",
+                "enumDescriptions": [
+                  "md",
+                  "pdf",
+                  "docx"
+                ]
             }
         },
-        "required": ["title", "macro_subject", "topics", "learning_outcome", "education_level", "duration", "language"]
+        "required": ["title", "macro_subject", "topics", "learning_outcome", "education_level", "duration", "language", "type_of_file"]
     },
 )
 
 generate_activity_tool = Tool(
     name="generate_activity",
-    description="Generate an educational activity, this tool can generate both exercises and in-class activities of more than 20 types",
+    description="Generate one or more educational activities for a given topic, this tool can generate more than 20 types of exercises and in-class activities.",
     inputSchema={
         "type": "object",
         "properties": {
@@ -284,53 +302,62 @@ generate_activity_tool = Tool(
             },
             "material": {
                 "type": "string",
-                "description": "the material with the ground truth and the information that will be used in the activity"
+                "description": "the material with the ground truth and the information that will be used in the activity, can be default to 'use your internal knowledge' for simple tasks to get the LLM use its knowledge to generate the activity"
             },
-            "solutions_number": {
-                "type": "integer",
-                "description": "the number of solutions/correct answers for the activity"
-            },
-            "distractors_number": {
-                "type": "integer",
-                "description": "the number of distractors/incorrect solutions for the activity"
-            },
-            "easily_discardable_distractors_number": {
-                "type": "integer",
-                "description": "the number of distractors that can be easily discarded for the activity"
-            },
-            "type": {
-                "type": "string",
-                "description": "The type of educational activity to create",
-                "enum": [
-                    "OPEN_QUESTION",
-                    "SHORT_ANSWER_QUESTION", 
-                    "TRUE_OR_FALSE",
-                    "FILL_IN_THE_BLANKS",
-                    "MATCHING",
-                    "ORDERING",
-                    "MULTIPLE_CHOICE",
-                    "MULTIPLE_SELECT",
-                    "CODING",
-                    "ESSAY",
-                    "KNOWLEDGE_EXPOSITION",
-                    "DEBATE",
-                    "BRAINSTORMING",
-                    "GROUP_DISCUSSION",
-                    "SIMULATION",
-                    "INQUIRY_BASED_LEARNING",
-                    "NON_WRITTEN_MATERIAL_ANALYSIS",
-                    "NON_WRITTEN_MATERIAL_PRODUCTION",
-                    "CASE_STUDY_ANALYSIS",
-                    "PROJECT_BASED_LEARNING",
-                    "PROBLEM_SOLVING_ACTIVITY"
-                ]
+            "params": {
+                "type": "array",
+                "description": "the parameters for the activity",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "type": {
+                            "type": "string",
+                            "description": "The type of educational activity to create",
+                            "enum": [
+                                "OPEN_QUESTION",
+                                "SHORT_ANSWER_QUESTION", 
+                                "TRUE_OR_FALSE",
+                                "FILL_IN_THE_BLANKS",
+                                "MATCHING",
+                                "ORDERING",
+                                "MULTIPLE_CHOICE",
+                                "MULTIPLE_SELECT",
+                                "CODING",
+                                "ESSAY",
+                                "KNOWLEDGE_EXPOSITION",
+                                "DEBATE",
+                                "BRAINSTORMING",
+                                "GROUP_DISCUSSION",
+                                "SIMULATION",
+                                "INQUIRY_BASED_LEARNING",
+                                "NON_WRITTEN_MATERIAL_ANALYSIS",
+                                "NON_WRITTEN_MATERIAL_PRODUCTION",
+                                "CASE_STUDY_ANALYSIS",
+                                "PROJECT_BASED_LEARNING",
+                                "PROBLEM_SOLVING_ACTIVITY"
+                            ]
+                        },
+                        "solutions_number": {
+                            "type": "integer",
+                            "description": "the number of solutions/correct answers for the activity"
+                        },
+                        "distractors_number": {
+                            "type": "integer",
+                            "description": "the number of distractors/incorrect solutions for the activity"
+                        },
+                        "easily_discardable_distractors_number": {
+                            "type": "integer",
+                            "description": "the number of distractors that can be easily discarded for the activity"
+                        }
+                    }
+                }
             },
             "language": {
                 "type": "string",
                 "description": "the language of the activity, defaults to English"
             }
         },
-        "required": ["macro_subject", "topic", "topic_explanation", "education_level", "learning_outcome", "material", "solutions_number", "distractors_number", "easily_discardable_distractors_number", "type", "language"]
+        "required": ["macro_subject", "topic", "topic_explanation", "education_level", "learning_outcome", "material", "params", "language"]
     },
 )
 
@@ -630,6 +657,7 @@ async def handle_generate_material(arguments: dict) -> list[TextContent]:
             "education_level": arguments["education_level"],
             "duration": arguments["duration"],
             "language": arguments.get("language", "English"),
+            "type_of_file": arguments["type_of_file"],
             "model": MODEL
         }
 
@@ -637,11 +665,25 @@ async def handle_generate_material(arguments: dict) -> list[TextContent]:
         async with aiohttp.ClientSession() as session:
             async with session.post(url, json=payload, headers=headers) as response:
                 if response.status == 200:
-                    result = await response.json()
+                    file_bytes = await response.read()
+
+                    # extract filename from Content-Disposition
+                    cd = response.headers.get("Content-Disposition", "")
+                    filename = "material"
+                    if "filename=" in cd:
+                        filename = cd.split("filename=")[-1].strip('"')
+
+                    # encode to base64
+                    encoded = base64.b64encode(file_bytes).decode("utf-8")
+
                     return [TextContent(
                         type="text",
-                        text=f"{json.dumps(result, indent=2)}"
+                        text=json.dumps({
+                            "filename": filename,
+                            "base64": encoded
+                        }, indent=2)
                     )]
+
                 else:
                     error_text = await response.text()
                     return [TextContent(
@@ -672,10 +714,7 @@ async def handle_generate_activity(arguments: dict) -> list[TextContent]:
             "education_level": arguments["education_level"],
             "learning_outcome": arguments["learning_outcome"],
             "material": arguments["material"],
-            "solutions_number": arguments["solutions_number"],
-            "distractors_number": arguments["distractors_number"],
-            "easily_discardable_distractors_number": arguments["easily_discardable_distractors_number"],
-            "type": arguments["type"],
+            "params": arguments["params"],
             "language": arguments.get("language", "English"),
             "model": MODEL
         }

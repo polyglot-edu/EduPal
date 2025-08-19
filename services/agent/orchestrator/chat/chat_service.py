@@ -540,6 +540,11 @@ async def send_message(request: SendMessageRequest, user_collection: AsyncIOMoto
                                     content=tool_text
                                 )
                                 messages.append(tool_message)
+                                # if the tool was the generate material tool, empty the content of the message
+                                if tool_name == "generate_material":
+                                    new_state.goal_state.steps_done.append(planning_response.goal_state.next_steps[0])
+                                    new_state.goal_state.next_steps.pop(0)
+                                    return messages, new_state
                             else: 
                                 logger.error("Tool response is None")
                                 #print("-"*50,"\nTool response is None\n", "-"*50)
