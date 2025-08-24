@@ -97,28 +97,10 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
     else:
         raise ValueError(f"Unknown tool: {name}")
 
-
 async def run_mcp_server():
-    import logging
-    logger = logging.getLogger(__name__)
-    
-    try:
-        logger.info("Starting MCP server...")
-        
-        async with stdio_server() as (read_stream, write_stream):
-            logger.info("MCP server connected")
-            
-            # This will run until cancelled or an error occurs
-            await server.run(read_stream, write_stream, server.create_initialization_options())
-            
-    except asyncio.CancelledError:
-        logger.info("MCP server cancelled gracefully")
-        return
-        
-    except Exception as e:
-        logger.error(f"MCP server error: {e}")
-        # Don't re-raise - let the thread handle it
-        return
-    
-    finally:
-        logger.info("MCP server stopped")
+    """Run the MCP server (used in main.py)"""
+    async with stdio_server() as (read_stream, write_stream):
+        await server.run(read_stream, write_stream, server.create_initialization_options())
+
+if __name__ == "__main__":
+    asyncio.run(run_mcp_server())
