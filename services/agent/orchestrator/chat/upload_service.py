@@ -157,7 +157,7 @@ def iterative_merging(chunks: List[Tuple[str, Dict[str, int]]]) -> List[Tuple[st
     model =  SentenceTransformer("sentence-transformers/all-mpnet-base-v2")
     # Extract text for embedding
     texts: List[str] = [chunk[0] for chunk in chunks]
-    embeddings: np.ndarray = model.encode(texts, convert_to_numpy=True)
+    embeddings: np.ndarray = model.encode(texts, convert_to_numpy=True, show_progress_bar=False)
     similarities, avg_inter_similarity = compute_similarities(embeddings)
     #print("Initial average inter chunk similarity:", avg_inter_similarity)
 
@@ -187,7 +187,7 @@ def iterative_merging(chunks: List[Tuple[str, Dict[str, int]]]) -> List[Tuple[st
             complete_text: str = "".join(chunks[elem][0] for elem in current_group)
             
             if len(current_group) > 1:
-                merged_emb: np.ndarray = model.encode(complete_text, convert_to_numpy=True)
+                merged_emb: np.ndarray = model.encode(complete_text, convert_to_numpy=True, show_progress_bar=False)
             else:
                 merged_emb = embeddings[current_group[0]]
 
