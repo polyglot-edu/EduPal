@@ -19,7 +19,7 @@ You are an intelligent assistant. Your task is to refine a JSON object based on 
 ### Instructions
 {request.instructions}
 
-### Original JSON
+### Original JSON string
 {request.json_object}
 
 ### Notes:

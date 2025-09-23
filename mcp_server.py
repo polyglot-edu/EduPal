@@ -1,4 +1,5 @@
 import asyncio
+import json
 from services.agent.tools.tools_manager import handle_define_syllabus, handle_evaluate_activity, handle_filter_oers, handle_generate_activity, handle_generate_material, handle_refine, handle_get_oers_collections, handle_plan_course, handle_plan_lesson, define_syllabus_tool, plan_course_tool, plan_lesson_tool, generate_material_tool, generate_activity_tool, evaluate_activity_tool, refine_tool, get_oers_collections_tool, filter_oers_tool
 from mcp.server import Server
 from mcp.server.stdio import stdio_server
@@ -73,6 +74,7 @@ async def list_tools() -> list[Tool]:
 @server.call_tool()
 async def call_tool(name: str, arguments: dict) -> list[TextContent]:
     """Handle tool calls from LLMs"""
+    arguments = json.loads(arguments)
     #if there are some enums, match the arg with the key of the enum and replace with the value
     sanitize_enums(arguments, {"education_level": EducationLevel, "text_style": TextStyle, "learning_outcome": LearningOutcome, "type": TypeOfActivity, "assessment": TypeOfAssessment, "action_type": ActionType})
         

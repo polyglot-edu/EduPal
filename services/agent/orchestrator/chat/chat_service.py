@@ -1,5 +1,6 @@
 from datetime import datetime, timezone
 import json
+import re
 from typing import List
 from bson import ObjectId
 from bson.errors import InvalidId
@@ -20,6 +21,56 @@ logger = logging.getLogger(__name__)
 STM_LENGTH = 4000  # "Min" number of tokens for STM memory
 LTM_LENGTH = 12207  # "Max" number of tokens for LTM memory
 MAX_STEPS = 3  # Maximum number of steps to perform in the grounding process
+
+def parse_malformed_json(s):
+    """Parse this specific malformed JSON structure and return tool_name and parameters as strings"""
+    
+    try:
+        # Extract tool_name
+        tool_match = re.search(r'"tool_name":\s*"([^"]*)"', s)
+        tool_name = tool_match.group(1) if tool_match else None
+        
+        # Find where json_object content starts and ends
+        json_obj_start = s.find('"json_object": "')
+        if json_obj_start == -1:
+            return None, None
+            
+        # Find the start of the JSON content
+        content_start = json_obj_start + len('"json_object": "')
+        
+        # Find where this JSON object ends - look for the pattern that indicates
+        # the end of json_object and start of instructions
+        end_pattern = '", "instructions":'
+        content_end = s.find(end_pattern, content_start)
+        
+        if content_end == -1:
+            return None, None
+            
+        # Extract the nested JSON string
+        nested_json = s[content_start:content_end]
+        
+        # Extract instructions and language
+        instr_match = re.search(r'"instructions":\s*"([^"]*(?:\\.[^"]*)*)"', s)
+        lang_match = re.search(r'"language":\s*"([^"]*)"', s)
+        
+        instructions = instr_match.group(1).replace('\\"', '"') if instr_match else ""
+        language = lang_match.group(1) if lang_match else ""
+        
+        # Construct parameters as a dictionary
+        parameters_dict = {
+            "json_object": nested_json,
+            "instructions": instructions,
+            "language": language
+        }
+        
+        # Convert to JSON string
+        parameters_json = json.dumps(parameters_dict)
+        
+        return tool_name, parameters_json
+        
+    except Exception as e:
+        #print(f"Parsing error: {e}")
+        return None, None
 
 async def get_memory(user_collection, chat_id: str)-> Memory:
     """
@@ -516,19 +567,31 @@ async def send_message(request: SendMessageRequest, user_collection: AsyncIOMoto
                     )
                     messages.append(assistant_message)
 
-                    if grounding_response.tool_call != "None":
-                        #print("-"*50,"\nTool call:", grounding_response.tool_call,"\n", "-"*50)
-                        tool_call_dict: dict = json.loads(grounding_response.tool_call)
-                        tool_name = tool_call_dict.get("tool_name")
-                        tool_params = tool_call_dict.get("parameters")
+                    if grounding_response.tool_call != "None":    
+                        tool_call = grounding_response.tool_call
+                        #tool_call = json.dumps(tool_call)
+                        #tool_call = tool_call.replace("\n", "\\\n")
+                        #print("-"*50,"\n Tool call:", tool_call,"\n", "-"*50)                        # check if there are any "\'" in the string and replace them with single quote to avoid errors
+                        if "\\'" in tool_call:
+                            tool_call = tool_call.replace("\\'", "'")
+
+                        json_tool_call = json.loads(tool_call)
+                        #print("-"*50,"\n JSON Tool call:", json_tool_call,"\n", "-"*50)
+                        tool_name = json_tool_call.get("tool_name")
+                        tool_params = json_tool_call.get("parameters")
+                        tool_params = json.dumps(tool_params)
+                        
+                        #tool_name, tool_params = parse_malformed_json(tool_call)
+                        #print("-"*50,"\n Calling with tool name:", tool_name,"\n", "-"*50)
+                        #print("-"*50,"\n Calling with tool parameters:", tool_params,"\n", "-"*50)
+
                         if tool_name is not None and tool_name != "None" and tool_name != "" and tool_params is not None and tool_params != "None" and tool_params != "":
-                            if isinstance(tool_params, str):
-                                converted_tool_params = json.loads(tool_params)
-                            else:
-                                converted_tool_params = tool_params
+                            #converted_tool_params = tool_params
+                            #converted_tool_params = json.dumps(converted_tool_params)
+                            #converted_tool_params = converted_tool_params.replace("\n", "\\n")
                             # call your MCP server call_tool function here asynchronously
                             #print("-"*50,"\nCalling tool:", tool_name,"\n", "-"*50)
-                            #print("-"*50,"\nTool parameters:", converted_tool_params,"\n", "-"*50)
+                            #print("-"*50,"\n Calling with tool parameters:", converted_tool_params,"\n", "-"*50)
                             tool_response: list[TextContent] = await call_tool(tool_name, tool_params)
                             #print("-"*50,"\nTool response:", tool_response[0].text,"\n", "-"*50)
                             tool_text = tool_response[0].text if tool_response else "No response"
@@ -537,7 +600,8 @@ async def send_message(request: SendMessageRequest, user_collection: AsyncIOMoto
                                 request_analysis_reviewed.state.grounding_state.models.append(tool_text)
                                 tool_message = Message(
                                     role="tool",
-                                    content=tool_text
+                                    content=tool_text,
+                                    system_instructions=tool_params
                                 )
                                 messages.append(tool_message)
                                 # if the tool was the generate material tool, empty the content of the message

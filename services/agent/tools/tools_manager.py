@@ -459,7 +459,7 @@ refine_tool = Tool(
         "properties": {
             "json_object": {
                 "type": "string",
-                "description": "the json object to refine in string format"
+                "description": "the json object to refine as inline string format. Note that single quote is fine, no need to escape it"
             },
             "instructions": {
                 "type": "string",
@@ -796,12 +796,19 @@ async def handle_refine(arguments: dict) -> list[TextContent]:
         }
 
         # Prepare the payload
+        obj = arguments.get("json_object")
+        if isinstance(obj, str):
+            str_obj = obj
+        else:
+            #convert tool params to string
+            str_obj = json.dumps(obj)
         payload = {
-            "json_object": arguments.get("json_object"),
+            "json_object": str_obj,
             "instructions": arguments.get("instructions"),
             "language": arguments.get("language", "English"),
             "model": MODEL
         }
+        #print(payload)
 
         # Make the API call
         async with aiohttp.ClientSession() as session:

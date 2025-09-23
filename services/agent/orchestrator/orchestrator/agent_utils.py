@@ -183,27 +183,7 @@ Answer:
 - If using a tool, explain why and how the tool and its parameters are selected (only if all parameters are known).
 
 ToolCall (JSON schema):
-    JSON string (escaped) with format: {{\\"tool_name\\": string, \\"parameters\\": dict}} or "None"
-
-    If you are using a tool:
-    {{
-    \\"tool_name\\": \\"tool_name_here\\",
-    \\"parameters\\": {{
-        \\"param1\\": \\"value1\\",
-        \\"param2\\": \\"sub-param2.1\\": \\"value2.1\\"
-                      \\"sub-param2.2\\": \\"value2.2\\"
-                      \\"sub-param2.3\\": \\"value2.3\\"
-        \\"param3\\": \\"value3\\"
-        ...
-    }}
-    }}
-
-    If you are not using a tool:
-    {{
-    \\"tool_name\\": \\"None\\",
-    \\"parameters\\": \\"None\\"
-    }}
-
+    JSON with format: {{"tool_name": string, "parameters": dict}} or "None" in both "tool_name" and "parameters" objects if not using a tool
     No text after or below the JSON block.
     The JSON **MUST** match the required structure for the tool, including **nested objects**, arrays, and enums.
 
