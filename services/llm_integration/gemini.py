@@ -12,8 +12,11 @@ load_dotenv()
 API_KEY = os.getenv("GEMINI_API_KEY", "")
 
 class GeminiLLM(LLMInterface):
-    def __init__(self):
-        self.client = genai.Client(api_key=API_KEY)
+    def __init__(self, api_key: Optional[str] = None):
+        api_key = api_key or API_KEY
+        if not api_key:
+            raise ValueError("Gemini API key is required to initialize GeminiLLM")
+        self.client = genai.Client(api_key=api_key)
         self.model = "gemini-2.0-flash"
         self.image_model = "gemini-2.0-flash"
 

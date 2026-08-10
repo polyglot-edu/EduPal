@@ -547,7 +547,7 @@ async def update_chat_name(chat_id: str, chat_name: str = Body(...), token: str 
 
 
 @router.post("/chat/{chat_id}", response_model=List[Message])
-async def send_message_to_chat(chat_id: str, message: Message = Body(...), token: str = Header(..., alias="token"), access_key: str = Header(..., alias="access_key"), model: str =  Header("gemini", alias="model")):
+async def send_message_to_chat(chat_id: str, message: Message = Body(...), token: str = Header(..., alias="token"), access_key: str = Header(..., alias="access_key"), model: str =  Header("gemini", alias="model"), llm_token: str | None = Header(None, alias="llm_token") ):
     """Add new messages in a chat document by its ID
     Parameters:
     - chat_id: ID of the chat to update (in URL path)
@@ -586,7 +586,7 @@ async def send_message_to_chat(chat_id: str, message: Message = Body(...), token
     )
 
     # Send the message to the LLM and get the response
-    new_messages, next_state = await send_message(send_message_request, user_collection=db[username])
+    new_messages, next_state = await send_message(send_message_request, user_collection=db[username], llm_token=llm_token)
     #print("-"*50,"\n")
     #print("Message sent to LLM, response received")
     #print("\n","-"*50)
@@ -599,7 +599,7 @@ async def send_message_to_chat(chat_id: str, message: Message = Body(...), token
         model=model
     )
     
-    result = await update_chat_info(user_collection, chat_id, update_chat_request)
+    result = await update_chat_info(user_collection, chat_id, update_chat_request, llm_token=llm_token)
     #print("Chat document updated with new messages")
     if result: return new_messages
     else:

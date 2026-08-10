@@ -19,9 +19,13 @@ IMAGE_GEN_MODEL = os.getenv("AZURE_OPENAI_IMAGE_DEPLOYMENT", "dall-e-3")
 
 
 class AzureOpenAILLM(LLMInterface):
-    def __init__(self):
+    def __init__(self, api_key: Optional[str] = None):
+        api_key = api_key or AZURE_OPENAI_API_KEY
+        if not api_key:
+            raise ValueError("Azure OpenAI API key is required to initialize AzureOpenAILLM")
+
         self.client = AzureOpenAI(
-            api_key=AZURE_OPENAI_API_KEY,
+            api_key=api_key,
             azure_endpoint=AZURE_OPENAI_ENDPOINT,
             api_version=AZURE_OPENAI_API_VERSION
         )

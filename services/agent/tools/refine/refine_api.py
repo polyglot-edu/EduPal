@@ -13,7 +13,7 @@ router = APIRouter(
 )
 
 @router.post("/refine", response_model=Refinement)
-async def refine( request: RefineRequest, access_key: str = Header(...) ):
+async def refine( request: RefineRequest, access_key: str = Header(...), llm_token: str | None = Header(None, alias="llm_token") ):
     """
     Refine an object based on:
 
@@ -29,7 +29,7 @@ async def refine( request: RefineRequest, access_key: str = Header(...) ):
 
     try: 
         authenticate(access_key)
-        result = refinement(request)
+        result = refinement(request, llm_token=llm_token)
 
     except Exception as e:
         if hasattr(e, "status_code"):

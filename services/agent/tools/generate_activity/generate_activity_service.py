@@ -1,8 +1,8 @@
 from services.llm_integration.llm_interface import get_llm
 from .generate_activity_utils import GenerateActivityRequest, Activity, GeneratedActivity, generate_activity_prompt
 
-def activity(request: GenerateActivityRequest):
-    llm = get_llm(request.model)
+def activity(request: GenerateActivityRequest, llm_token: str | None = None):
+    llm = get_llm(request.model, api_key=llm_token)
     try:
         #print("Prompt: ",generate_activity_prompt(request))
         #print("-"*100)

@@ -50,8 +50,8 @@ def generate_pdf(markdown_content: str) -> io.BytesIO:
     return buffer
 
 # Main material handler
-def material(request: GenerateMaterialRequest):
-    llm = get_llm(request.model)
+def material(request: GenerateMaterialRequest, llm_token: str | None = None):
+    llm = get_llm(request.model, api_key=llm_token)
 
     try:
         response: GenerateMaterialResponse = llm.generate_text(

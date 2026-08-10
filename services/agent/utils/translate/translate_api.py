@@ -13,7 +13,7 @@ router = APIRouter(
 )
 
 @router.post("/translate", response_model=TranslateResponse)
-async def translate_text( request: TranslateRequest, access_key: str = Header(...) ):
+async def translate_text( request: TranslateRequest, access_key: str = Header(...), llm_token: str | None = Header(None, alias="llm_token") ):
     """
     Translate a text into a specified language using the specified model.
 
@@ -29,8 +29,8 @@ async def translate_text( request: TranslateRequest, access_key: str = Header(..
     """
     try: 
         authenticate(access_key)
-        result = translate(request.text, request.language, request.model)
 
+        result = translate(request.text, request.language, request.model, llm_token=llm_token)
     except Exception as e:
         if hasattr(e, "status_code"):
             raise HTTPException(status_code=e.status_code, detail=str(e))

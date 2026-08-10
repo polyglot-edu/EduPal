@@ -28,11 +28,11 @@ class LLMInterface(ABC):
 from .openai import AzureOpenAILLM
 from .gemini import GeminiLLM
 
-def get_llm(model) -> LLMInterface:
+def get_llm(model, api_key: Optional[str] = None) -> LLMInterface:
     # check if the model is supported using a capitalized name
-    model = model.upper()
+    model = model.upper() if model is not None else "GEMINI"
     if model == "OPENAI":
-        return AzureOpenAILLM()
-    elif model == "GEMINI" or model is None:
-        return GeminiLLM()
+        return AzureOpenAILLM(api_key=api_key)
+    elif model == "GEMINI":
+        return GeminiLLM(api_key=api_key)
     raise NotImplementedError(f"Model {model} not supported.")

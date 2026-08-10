@@ -14,7 +14,7 @@ router = APIRouter(
 )
 
 @router.post("/generate_material")
-async def generate_material( request: GenerateMaterialRequest, access_key: str = Header(...) ):
+async def generate_material( request: GenerateMaterialRequest, access_key: str = Header(...), llm_token: str | None = Header(None, alias="llm_token") ):
     """
     Generate material for a given topic based on:
 
@@ -37,7 +37,7 @@ async def generate_material( request: GenerateMaterialRequest, access_key: str =
     """
     try: 
         authenticate(access_key)
-        result: StreamingResponse = material(request)
+        result: StreamingResponse = material(request, llm_token=llm_token)
         return result
 
     except Exception as e:

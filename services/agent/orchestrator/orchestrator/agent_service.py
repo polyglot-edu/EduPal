@@ -62,12 +62,12 @@ def google_cse_search(query, api_key, cse_id, num=5) -> Tuple[str, List[WebGroun
     final_results: Tuple[str, List[WebGroundingResponse]] = (query, results)
     return final_results
 
-async def ground_response(user_collection: AsyncIOMotorCollection, chat_id, source: GroundingSteps, resources: List[str], queries: str, language: str, intent: str, reasoning: str, model: str = "GEMINI") -> str:
+async def ground_response(user_collection: AsyncIOMotorCollection, chat_id, source: GroundingSteps, resources: List[str], queries: str, language: str, intent: str, reasoning: str, model: str = "GEMINI", llm_token: str | None = None) -> str:
     """
     Grounds the query using the provided resources.
     """
     # Define the LLM object
-    llm = get_llm(model)
+    llm = get_llm(model, api_key=llm_token)
 
     queries = queries.split('\n')
     grounded_material = ""

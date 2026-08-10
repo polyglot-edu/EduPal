@@ -13,7 +13,7 @@ router = APIRouter(
 )
 
 @router.post("/plan_course", response_model=CoursePlan)
-async def plan_course( request: PlanCourseRequest, access_key: str = Header(...) ):
+async def plan_course( request: PlanCourseRequest, access_key: str = Header(...), llm_token: str | None = Header(None, alias="llm_token") ):
     """
     Plan a course based on:
 
@@ -49,7 +49,7 @@ async def plan_course( request: PlanCourseRequest, access_key: str = Header(...)
 
     try: 
         authenticate(access_key)
-        result = course_plan(request)
+        result = course_plan(request, llm_token=llm_token)
 
     except Exception as e:
         if hasattr(e, "status_code"):
