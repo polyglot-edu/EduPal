@@ -1,8 +1,8 @@
 from services.llm_integration.llm_interface import get_llm
 from .define_syllabus_utils import DefineSyllabusRequest, DefineSyllabusResponse, Syllabus, define_syllabus_prompt
 
-def syllabus(request: DefineSyllabusRequest):
-    llm = get_llm(request.model)
+def syllabus(request: DefineSyllabusRequest, llm_token: str | None = None):
+    llm = get_llm(request.model, api_key=llm_token)
     try:
         response: DefineSyllabusResponse = llm.generate_text(prompt=define_syllabus_prompt(request), response_model=DefineSyllabusResponse)
         #print("Response",response)

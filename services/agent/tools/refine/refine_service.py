@@ -1,8 +1,8 @@
 from services.llm_integration.llm_interface import get_llm
 from .refine_utils import RefineRequest, Refinement, refine_prompt
 
-def refinement(request: RefineRequest):
-    llm = get_llm(request.model)
+def refinement(request: RefineRequest, llm_token: str | None = None):
+    llm = get_llm(request.model, api_key=llm_token)
     try:
         #print("Prompt: ",refine_prompt(request))
         #print("-"*100)

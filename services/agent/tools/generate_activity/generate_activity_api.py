@@ -13,7 +13,7 @@ router = APIRouter(
 )
 
 @router.post("/generate_activity", response_model=Activity)
-async def generate_activity( request: GenerateActivityRequest, access_key: str = Header(...) ):
+async def generate_activity( request: GenerateActivityRequest, access_key: str = Header(...), llm_token: str | None = Header(None, alias="llm_token") ):
     """
     Generate one or more activities for a given topic based on:
 
@@ -52,8 +52,8 @@ async def generate_activity( request: GenerateActivityRequest, access_key: str =
 
     try: 
         authenticate(access_key)
-        result = activity(request)
 
+        result = activity(request, llm_token=llm_token)
     except Exception as e:
         if hasattr(e, "status_code"):
             raise HTTPException(status_code=e.status_code, detail=str(e))

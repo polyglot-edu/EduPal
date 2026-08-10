@@ -13,7 +13,7 @@ router = APIRouter(
 )
 
 @router.post("/define_syllabus", response_model=Syllabus)
-async def define_syllabus( request: DefineSyllabusRequest, access_key: str = Header(...) ):
+async def define_syllabus( request: DefineSyllabusRequest, access_key: str = Header(...), llm_token: str | None = Header(None, alias="llm_token") ):
     """
     Defines a syllabus based on:
 
@@ -44,7 +44,7 @@ async def define_syllabus( request: DefineSyllabusRequest, access_key: str = Hea
 
     try: 
         authenticate(access_key)
-        result = syllabus(request)
+        result = syllabus(request, llm_token=llm_token)
 
     except Exception as e:
         if hasattr(e, "status_code"):

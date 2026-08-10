@@ -13,7 +13,7 @@ router = APIRouter(
 )
 
 @router.post("/summarize", response_model=SummarizeResponse)
-async def summarize_text( request: SummarizeRequest, access_key: str = Header(...) ):
+async def summarize_text( request: SummarizeRequest, access_key: str = Header(...), llm_token: str | None = Header(None, alias="llm_token") ):
     """
     Summarize a text using the specified model and style.
 
@@ -34,7 +34,7 @@ async def summarize_text( request: SummarizeRequest, access_key: str = Header(..
         if len(request.text) < 200:
             raise HTTPException(status_code=400, detail="Text must be at least 200 characters.")
         
-        result = summary(request.text, request.model, request.style.value, request.education_level.value, request.learning_outcome.value)
+        result = summary(request.text, request.model, request.style.value, request.education_level.value, request.learning_outcome.value, llm_token=llm_token)
 
     except Exception as e:
         if hasattr(e, "status_code"):

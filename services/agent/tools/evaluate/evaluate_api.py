@@ -13,7 +13,7 @@ router = APIRouter(
 )
 
 @router.post("/evaluate", response_model=Evaluation)
-async def evaluate( request: EvaluateRequest, access_key: str = Header(...) ):
+async def evaluate( request: EvaluateRequest, access_key: str = Header(...), llm_token: str | None = Header(None, alias="llm_token") ):
     """
     Evaluate an activity based on:
 
@@ -46,7 +46,7 @@ async def evaluate( request: EvaluateRequest, access_key: str = Header(...) ):
 
     try: 
         authenticate(access_key)
-        result = evaluation(request)
+        result = evaluation(request, llm_token=llm_token)
 
     except Exception as e:
         if hasattr(e, "status_code"):

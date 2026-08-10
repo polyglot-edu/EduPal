@@ -18,7 +18,7 @@ router = APIRouter(
 
 @router.post("/analyse_material", response_model=AnalyseMaterialResponse)
 async def analyse_material(
-    file: Optional[UploadFile] = File(None), url: Optional[str] = Form(None), model: str = Form(...), access_key: str = Header(...)
+    file: Optional[UploadFile] = File(None), url: Optional[str] = Form(None), model: str = Form(...), access_key: str = Header(...), llm_token: str | None = Header(None, alias="llm_token")
 ):
     """
     Analyse a material and extract meaningful information. It's based on:
@@ -47,7 +47,7 @@ async def analyse_material(
     try: 
         authenticate(access_key)
 
-        result = await analysis(file=file, url=url, model=model)
+        result = await analysis(file=file, url=url, model=model, llm_token=llm_token)
 
         # 1.1 Delete the temp_file
         if file is not None and file.filename != "":
