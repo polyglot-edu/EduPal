@@ -1,0 +1,87 @@
+# Deployment compose, consumed by Coolify's Docker Compose build pack.
+# Every ${VAR} below is supplied from Coolify's environment panel.
+#
+# Coolify settings:
+#   Build pack      Docker Compose
+#   Base Directory  /                     (this file is at the repo root)
+#   Compose file    docker-compose.yml
+#   Domain          on the `edupal` service
+#
+# There is deliberately NO database service here. EduPal requires MongoDB
+# **Atlas**: services/auth/auth_service.py calls the Atlas Admin API to create
+# the `embedding_vector_index` knnVector index during user registration and OER
+# collection creation, and no self-hosted MongoDB can serve that call.
+# For a local stack see docker-compose.local.yml.
+
+# Single definition of the port for this file. Compose needs it in two places —
+# `expose` tells Coolify's proxy where to route, `environment` tells uvicorn what
+# to bind — so the anchor keeps them from drifting apart.
+#
+# Deliberately NOT a build arg: that would put the port in the image cache key,
+# so changing it would force a full rebuild (torch, model download and all)
+# rather than a restart.
+x-port: &port '${PORT:-8000}'
+
+services:
+  edupal:
+    build: .
+    restart: always
+    # expose, not ports: the proxy reaches the container over the internal
+    # network, so nothing needs publishing on the host.
+    expose:
+      - *port
+    # Mapping form rather than a list, because a YAML alias can only stand as a
+    # whole value — `- PORT=*port` would be the literal string "PORT=*port".
+    environment:
+      PORT: *port
+
+      # --- Database ---------------------------------------------------------
+      # Atlas connection string. The code defaults to localhost, which cannot
+      # work inside a container — always set this explicitly.
+      MONGO_URI: ${MONGO_URI}
+
+      # --- Atlas Admin API --------------------------------------------------
+      # Creates the knnVector search index. Required by user registration and
+      # OER collection creation; every other route works without it.
+      # Keys: Atlas → Access Manager → API Keys (Project level).
+      ATLAS_PROJECT_ID: ${ATLAS_PROJECT_ID}
+      ATLAS_CLUSTER_NAME: ${ATLAS_CLUSTER_NAME}
+      ATLAS_PUBLIC_KEY: ${ATLAS_PUBLIC_KEY}
+      ATLAS_PRIVATE_KEY: ${ATLAS_PRIVATE_KEY}
+
+      # --- JWT --------------------------------------------------------------
+      # Four independent signing secrets, so rotating one invalidates only the
+      # tokens it signs.
+      ACCESS_SECRET_KEY: ${ACCESS_SECRET_KEY}
+      USERS_SECRET_KEY: ${USERS_SECRET_KEY}
+      TOOLS_SECRET_KEY: ${TOOLS_SECRET_KEY}
+      CHAT_SECRET_KEY: ${CHAT_SECRET_KEY}
+      ALGORITHM: ${ALGORITHM:-HS256}
+      EXP_TIME: ${EXP_TIME:-60}
+
+      # --- Azure OpenAI -----------------------------------------------------
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      OPENAI_ENDPOINT: ${OPENAI_ENDPOINT}
+      OPENAI_DEPLOYMENT_NAME: ${OPENAI_DEPLOYMENT_NAME}
+      AZURE_OPENAI_IMAGE_DEPLOYMENT: ${AZURE_OPENAI_IMAGE_DEPLOYMENT}
+
+      # --- Google -----------------------------------------------------------
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      GOOGLE_SEARCH_API_KEY: ${GOOGLE_SEARCH_API_KEY}
+      GOOGLE_CSE_ID: ${GOOGLE_CSE_ID}
+
+      # --- Tuning -----------------------------------------------------------
+      # NOTE the spelling: the code reads SIMILARITY_THRSHOLD, not THRESHOLD.
+      SIMILARITY_THRSHOLD: ${SIMILARITY_THRSHOLD:-0.5}
+
+    healthcheck:
+      # Reads $PORT from the container's own environment, so it follows the
+      # anchor above without repeating the value.
+      # GET / needs no database, so this reports process health rather than
+      # upstream availability. start_period is generous because the embedding
+      # model is loaded into memory during import, before the app serves.
+      test: ['CMD-SHELL', 'wget -qO- "http://127.0.0.1:$$PORT/" || exit 1']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 90s
