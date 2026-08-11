@@ -301,18 +301,18 @@ def read_pptx_file(file_path: str) -> List[Document]:
         slide_num += 1
     return documents
 
-def analyse_image_with_llm(image: Image) -> str:
+def analyse_image_with_llm(image: Image, api_key: str | None = None) -> str:
     """
     Uses an LLM to analyze the image and extract text.
     This is a placeholder function; actual implementation may vary.
     """
     # Call the LLM with a prompt to analyze the image
-    llm = GeminiLLM()
+    llm = GeminiLLM(api_key=api_key)
     prompt = analyse_image_prompt()
     response = llm.generate_text(prompt=prompt, image=image)
     return response
 
-def get_text_from_source(text: str) -> List[Document]:
+def get_text_from_source(text: str, api_key: str | None = None) -> List[Document]:
     """
     Determines if the input 'text' is a file path, URL, YouTube URL, or direct text content.
     Extracts and returns the appropriate text content as a list of Document objects.
@@ -355,7 +355,7 @@ def get_text_from_source(text: str) -> List[Document]:
                     image = Image.open(text)
                     ocr_text = pytesseract.image_to_string(image)
                     if ocr_text.len(ocr_text.strip()) < 40:
-                        image_text = analyse_image_with_llm(image)
+                        image_text = analyse_image_with_llm(image, api_key=api_key)
                         if image_text:
                             ocr_text = image_text
                         else:
@@ -421,8 +421,8 @@ def merge_analysis_responses(responses: List[AnalyseMaterialResponse]) -> Analys
     return merged_response
 
 # --- Main Function ---
-async def analysis(model: str, file: Optional[UploadFile] = File(None), url: Optional[str] = Form(None)) -> Analysis:
-    llm = get_llm(model)
+async def analysis(model: str, file: Optional[UploadFile] = File(None), url: Optional[str] = Form(None), llm_token: str | None = None) -> Analysis:
+    llm = get_llm(model, api_key=llm_token)
     from services.agent.orchestrator.chat.upload_service import check_file, delete_temp_file
 
     try:
@@ -440,7 +440,7 @@ async def analysis(model: str, file: Optional[UploadFile] = File(None), url: Opt
         url = file_path
 
         # 1. Get text content from source (file, URL, or direct text)
-        documents = get_text_from_source(url)
+        documents = get_text_from_source(url, api_key=llm_token)
 
         text = extract_plain_text_from_documents(documents)
 

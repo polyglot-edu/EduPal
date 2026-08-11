@@ -1,8 +1,8 @@
 from services.llm_integration.llm_interface import get_llm
 from .evaluate_utils import EvaluateRequest, EvaluateResponse, Evaluation, evaluate_prompt
 
-def evaluation(request: EvaluateRequest):
-    llm = get_llm(request.model)
+def evaluation(request: EvaluateRequest, llm_token: str | None = None):
+    llm = get_llm(request.model, api_key=llm_token)
     try:
         #print("Prompt: ",evaluate_prompt(request))
         #print("-"*100)

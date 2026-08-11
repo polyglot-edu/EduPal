@@ -1,5 +1,6 @@
 from fastapi import APIRouter, FastAPI, HTTPException, Header
 from common.auth import authenticate
+from common.tier_restrictions import enforce_own_key_required
 from .plan_course_service import course_plan
 from .plan_course_utils import PlanCourseRequest, CoursePlan
 
@@ -13,7 +14,7 @@ router = APIRouter(
 )
 
 @router.post("/plan_course", response_model=CoursePlan)
-async def plan_course( request: PlanCourseRequest, access_key: str = Header(...) ):
+async def plan_course( request: PlanCourseRequest, access_key: str = Header(...), llm_token: str | None = Header(None, alias="llm_token") ):
     """
     Plan a course based on:
 
@@ -47,9 +48,10 @@ async def plan_course( request: PlanCourseRequest, access_key: str = Header(...)
     - **language** _(str)_: the language of the course, defaults to English
     """
 
-    try: 
+    try:
         authenticate(access_key)
-        result = course_plan(request)
+        enforce_own_key_required(llm_token, "Course planning")
+        result = course_plan(request, llm_token=llm_token)
 
     except Exception as e:
         if hasattr(e, "status_code"):

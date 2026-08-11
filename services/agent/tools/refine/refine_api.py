@@ -1,5 +1,6 @@
 from fastapi import APIRouter, FastAPI, HTTPException, Header
 from common.auth import authenticate
+from common.tier_restrictions import enforce_own_key_required
 from .refine_service import refinement
 from .refine_utils import RefineRequest, Refinement
 
@@ -13,7 +14,7 @@ router = APIRouter(
 )
 
 @router.post("/refine", response_model=Refinement)
-async def refine( request: RefineRequest, access_key: str = Header(...) ):
+async def refine( request: RefineRequest, access_key: str = Header(...), llm_token: str | None = Header(None, alias="llm_token") ):
     """
     Refine an object based on:
 
@@ -27,9 +28,10 @@ async def refine( request: RefineRequest, access_key: str = Header(...) ):
     - **refined_json** _(str)_: the refined JSON object
     """
 
-    try: 
+    try:
         authenticate(access_key)
-        result = refinement(request)
+        enforce_own_key_required(llm_token, "Refinement")
+        result = refinement(request, llm_token=llm_token)
 
     except Exception as e:
         if hasattr(e, "status_code"):

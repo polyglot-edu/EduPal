@@ -1,5 +1,6 @@
 from fastapi import APIRouter, FastAPI, HTTPException, Header
 from common.auth import authenticate
+from common.tier_restrictions import enforce_own_key_required
 from .translate_service import translate
 from .translate_utils import TranslateRequest, TranslateResponse
 
@@ -13,7 +14,7 @@ router = APIRouter(
 )
 
 @router.post("/translate", response_model=TranslateResponse)
-async def translate_text( request: TranslateRequest, access_key: str = Header(...) ):
+async def translate_text( request: TranslateRequest, access_key: str = Header(...), llm_token: str | None = Header(None, alias="llm_token") ):
     """
     Translate a text into a specified language using the specified model.
 
@@ -27,10 +28,11 @@ async def translate_text( request: TranslateRequest, access_key: str = Header(..
 
     Note that for JSONs, only the values will be translated.
     """
-    try: 
+    try:
         authenticate(access_key)
-        result = translate(request.text, request.language, request.model)
+        enforce_own_key_required(llm_token, "Translation")
 
+        result = translate(request.text, request.language, request.model, llm_token=llm_token)
     except Exception as e:
         if hasattr(e, "status_code"):
             raise HTTPException(status_code=e.status_code, detail=str(e))

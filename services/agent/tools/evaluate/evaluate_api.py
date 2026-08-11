@@ -1,5 +1,6 @@
 from fastapi import APIRouter, FastAPI, HTTPException, Header
 from common.auth import authenticate
+from common.tier_restrictions import enforce_own_key_required
 from .evaluate_service import evaluation
 from .evaluate_utils import EvaluateRequest, Evaluation
 
@@ -13,7 +14,7 @@ router = APIRouter(
 )
 
 @router.post("/evaluate", response_model=Evaluation)
-async def evaluate( request: EvaluateRequest, access_key: str = Header(...) ):
+async def evaluate( request: EvaluateRequest, access_key: str = Header(...), llm_token: str | None = Header(None, alias="llm_token") ):
     """
     Evaluate an activity based on:
 
@@ -44,9 +45,10 @@ async def evaluate( request: EvaluateRequest, access_key: str = Header(...) ):
     - **language** _(str)_: the language of the activity, defaults to English
     """
 
-    try: 
+    try:
         authenticate(access_key)
-        result = evaluation(request)
+        enforce_own_key_required(llm_token, "Activity evaluation")
+        result = evaluation(request, llm_token=llm_token)
 
     except Exception as e:
         if hasattr(e, "status_code"):

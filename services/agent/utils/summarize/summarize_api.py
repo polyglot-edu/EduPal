@@ -1,5 +1,6 @@
 from fastapi import APIRouter, FastAPI, HTTPException, Header
 from common.auth import authenticate
+from common.tier_restrictions import enforce_own_key_required
 from .summarize_serivce import summary
 from .summarize_utils import SummarizeRequest, SummarizeResponse
 
@@ -13,7 +14,7 @@ router = APIRouter(
 )
 
 @router.post("/summarize", response_model=SummarizeResponse)
-async def summarize_text( request: SummarizeRequest, access_key: str = Header(...) ):
+async def summarize_text( request: SummarizeRequest, access_key: str = Header(...), llm_token: str | None = Header(None, alias="llm_token") ):
     """
     Summarize a text using the specified model and style.
 
@@ -28,13 +29,14 @@ async def summarize_text( request: SummarizeRequest, access_key: str = Header(..
     - **summary** _(str)_: The summarized text.
     - **keywords** _(list[str])_: A list of keywords relevant to the topic.
     """
-    try: 
+    try:
         authenticate(access_key)
+        enforce_own_key_required(llm_token, "Summarization")
 
         if len(request.text) < 200:
             raise HTTPException(status_code=400, detail="Text must be at least 200 characters.")
         
-        result = summary(request.text, request.model, request.style.value, request.education_level.value, request.learning_outcome.value)
+        result = summary(request.text, request.model, request.style.value, request.education_level.value, request.learning_outcome.value, llm_token=llm_token)
 
     except Exception as e:
         if hasattr(e, "status_code"):

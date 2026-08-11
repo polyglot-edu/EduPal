@@ -321,12 +321,12 @@ async def delete_resources_by_ids(user_collection, resource_ids: List[str])-> in
 
 
 
-def update_structured_memory(request: UpdateStructuredMemoryRequest):
+def update_structured_memory(request: UpdateStructuredMemoryRequest, llm_token: str | None = None):
     """
     Update the memory of the chat document
     """
     model = request.model
-    llm = get_llm(model.capitalize())
+    llm = get_llm(model.capitalize(), api_key=llm_token)
     try:
         response: UpdateStructuredMemoryResponse = llm.generate_text(prompt=update_structured_memory_prompt(request), response_model=UpdateStructuredMemoryResponse)
     except Exception as e:
@@ -334,7 +334,7 @@ def update_structured_memory(request: UpdateStructuredMemoryRequest):
     
     return response
 
-async def update_chat_info(user_collection, chat_id: str, request: UpdateChatRequest) -> tuple[Memory, State]:
+async def update_chat_info(user_collection, chat_id: str, request: UpdateChatRequest, llm_token: str | None = None) -> tuple[Memory, State]:
     #get only assistant and user messages from the request
     contextual_messages:List[Message] = [msg for msg in request.messages if msg.role in {"assistant", "user"}]
     for message in contextual_messages:
@@ -378,7 +378,7 @@ async def update_chat_info(user_collection, chat_id: str, request: UpdateChatReq
             personal_info=personal_info_string,
             model=request.model
         )
-        updated_structured_memory: UpdateStructuredMemoryResponse = update_structured_memory(update_memory_request)
+        updated_structured_memory: UpdateStructuredMemoryResponse = update_structured_memory(update_memory_request, llm_token=llm_token)
         ##print(f"Updated memory: {updated_structured_memory}")
 
         # Update the personal information in the memory if it exists
@@ -441,7 +441,7 @@ async def update_chat_info(user_collection, chat_id: str, request: UpdateChatReq
 
 
 
-async def send_message(request: SendMessageRequest, user_collection: AsyncIOMotorCollection)-> tuple[List[Message], State]:
+async def send_message(request: SendMessageRequest, user_collection: AsyncIOMotorCollection, llm_token: str | None = None)-> tuple[List[Message], State]:
     """
     Send a message to the chat
     """
@@ -451,7 +451,7 @@ async def send_message(request: SendMessageRequest, user_collection: AsyncIOMoto
         user_message = request.message
         messages = [user_message]
         # Answer the message using the LLM
-        llm = get_llm(request.model)
+        llm = get_llm(request.model, api_key=llm_token)
  
         ##print(f"Message: {request.message.content}")
         ##print(f"Memory: {request.memory.to_str()}")
@@ -650,7 +650,8 @@ async def send_message(request: SendMessageRequest, user_collection: AsyncIOMoto
                         planning_response.language,
                         planning_response.goal_state.to_str(),
                         grounding_response.reasoning,
-                        request.model)
+                    request.model,
+                    llm_token)
                     #print(f"\nGrounded information: {grounded_information}\n")
                     request_analysis_reviewed.state.grounding_state.grounded_info = grounded_information
                     request_analysis_reviewed.state.grounding_state.last_grounding_step = grounding_response.grounding.value

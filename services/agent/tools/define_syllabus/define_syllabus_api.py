@@ -1,5 +1,6 @@
 from fastapi import APIRouter, FastAPI, HTTPException, Header
 from common.auth import authenticate
+from common.tier_restrictions import enforce_own_key_required
 from .define_syllabus_service import syllabus
 from .define_syllabus_utils import DefineSyllabusRequest, Syllabus
 
@@ -13,7 +14,7 @@ router = APIRouter(
 )
 
 @router.post("/define_syllabus", response_model=Syllabus)
-async def define_syllabus( request: DefineSyllabusRequest, access_key: str = Header(...) ):
+async def define_syllabus( request: DefineSyllabusRequest, access_key: str = Header(...), llm_token: str | None = Header(None, alias="llm_token") ):
     """
     Defines a syllabus based on:
 
@@ -42,9 +43,10 @@ async def define_syllabus( request: DefineSyllabusRequest, access_key: str = Hea
     - **language** _(str)_: The language of the syllabus, defaults to "English".
     """
 
-    try: 
+    try:
         authenticate(access_key)
-        result = syllabus(request)
+        enforce_own_key_required(llm_token, "Syllabus definition")
+        result = syllabus(request, llm_token=llm_token)
 
     except Exception as e:
         if hasattr(e, "status_code"):

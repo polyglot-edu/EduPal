@@ -12,8 +12,8 @@ from services.agent.utils.common_enums import get_exercises
 from services.llm_integration.llm_interface import get_llm
 from .generate_test_utils import GenerateTestRequest, TopicParams
 
-async def create_test(request: GenerateTestRequest):
-    llm = get_llm(request.model)
+async def create_test(request: GenerateTestRequest, llm_token: str | None = None):
+    llm = get_llm(request.model, api_key=llm_token)
     ext_result: tuple[list[Resource], list[TopicParams]] = ([], [])
     try:
         if request.material:

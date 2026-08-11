@@ -1,5 +1,6 @@
 from fastapi import APIRouter, FastAPI, HTTPException, Header
 from common.auth import authenticate
+from common.tier_restrictions import enforce_language_restriction, enforce_multiple_choice_only
 from .generate_activity_service import activity
 from .generate_activity_utils import GenerateActivityRequest, Activity
 
@@ -13,7 +14,7 @@ router = APIRouter(
 )
 
 @router.post("/generate_activity", response_model=Activity)
-async def generate_activity( request: GenerateActivityRequest, access_key: str = Header(...) ):
+async def generate_activity( request: GenerateActivityRequest, access_key: str = Header(...), llm_token: str | None = Header(None, alias="llm_token") ):
     """
     Generate one or more activities for a given topic based on:
 
@@ -50,10 +51,12 @@ async def generate_activity( request: GenerateActivityRequest, access_key: str =
     - **model** _(str)_: the model to use, defaults to Gemini
     """
 
-    try: 
+    try:
         authenticate(access_key)
-        result = activity(request)
+        enforce_language_restriction(llm_token, request.language)
+        enforce_multiple_choice_only(llm_token, [p.type.value for p in request.params])
 
+        result = activity(request, llm_token=llm_token)
     except Exception as e:
         if hasattr(e, "status_code"):
             raise HTTPException(status_code=e.status_code, detail=str(e))

@@ -2,6 +2,7 @@ import json
 from typing import Optional
 from fastapi import APIRouter, FastAPI, File, Form, HTTPException, Header, UploadFile
 from common.auth import authenticate
+from common.tier_restrictions import enforce_language_restriction, enforce_multiple_choice_only
 from .generate_test_service import create_test
 from .generate_test_utils import GenerateTestRequest
 from ..generate_activity.generate_activity_utils import Activity
@@ -16,7 +17,7 @@ router = APIRouter(
 )
 
 @router.post("/generate_test", response_model=list[Activity])
-async def generate_complete_test(access_key: str = Header(...), data: str = Form(...), material: Optional[UploadFile] = File(None) ):
+async def generate_complete_test(access_key: str = Header(...), data: str = Form(...), material: Optional[UploadFile] = File(None), llm_token: str | None = Header(None, alias="llm_token") ):
     """
 Generate a complete test for a given set of topics based on:
 
@@ -114,7 +115,12 @@ Returns a list of JSON objects with the following fields:
         if material:
             request.material = material
         authenticate(access_key)
-        result = await create_test(request)
+        enforce_language_restriction(llm_token, request.language)
+        requested_types = [e.type.value for e in request.exercises] + [
+            ap.type.value for t in request.topics for ap in t.exercise_params
+        ]
+        enforce_multiple_choice_only(llm_token, requested_types)
+        result = await create_test(request, llm_token=llm_token)
 
     except Exception as e:
         if hasattr(e, "status_code"):

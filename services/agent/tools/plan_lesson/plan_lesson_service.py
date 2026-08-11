@@ -1,8 +1,8 @@
 from services.llm_integration.llm_interface import get_llm
 from .plan_lesson_utils import PlanLessonRequest, PlanLessonResponse, LessonPlan, plan_lesson_prompt
 
-def lesson_plan(request: PlanLessonRequest):
-    llm = get_llm(request.model)
+def lesson_plan(request: PlanLessonRequest, llm_token: str | None = None):
+    llm = get_llm(request.model, api_key=llm_token)
     try:
         response: PlanLessonResponse = llm.generate_text(prompt=plan_lesson_prompt(request), response_model=PlanLessonResponse)
         

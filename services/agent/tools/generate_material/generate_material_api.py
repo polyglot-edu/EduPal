@@ -1,5 +1,6 @@
 from fastapi import APIRouter, FastAPI, HTTPException, Header
 from common.auth import authenticate
+from common.tier_restrictions import enforce_language_restriction
 from .generate_material_service import material
 from .generate_material_utils import GenerateMaterialRequest
 from fastapi.responses import StreamingResponse
@@ -14,7 +15,7 @@ router = APIRouter(
 )
 
 @router.post("/generate_material")
-async def generate_material( request: GenerateMaterialRequest, access_key: str = Header(...) ):
+async def generate_material( request: GenerateMaterialRequest, access_key: str = Header(...), llm_token: str | None = Header(None, alias="llm_token") ):
     """
     Generate material for a given topic based on:
 
@@ -35,9 +36,10 @@ async def generate_material( request: GenerateMaterialRequest, access_key: str =
 
     Generate educational material and return it as a downloadable file (.md, .pdf, or .docx).
     """
-    try: 
+    try:
         authenticate(access_key)
-        result: StreamingResponse = material(request)
+        enforce_language_restriction(llm_token, request.language)
+        result: StreamingResponse = material(request, llm_token=llm_token)
         return result
 
     except Exception as e:
