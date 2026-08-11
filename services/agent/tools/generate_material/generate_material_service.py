@@ -56,7 +56,8 @@ def material(request: GenerateMaterialRequest, llm_token: str | None = None):
     try:
         response: GenerateMaterialResponse = llm.generate_text(
             prompt=generate_material_prompt(request),
-            response_model=GenerateMaterialResponse
+            response_model=GenerateMaterialResponse,
+            options={"temperature": 0.0, "max_tokens": 8192}
         )
         generated_string = response.material
         filename_base = request.title.replace(" ", "_").lower()

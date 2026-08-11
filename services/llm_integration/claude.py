@@ -84,6 +84,7 @@ class ClaudeLLM(LLMInterface):
             system=system_prompt,
             messages=messages,
             max_tokens=options.get("max_tokens", 1000),
+            temperature=options.get("temperature", 0.0),
         )
 
         # For structured output, force a tool call instead of asking the model to
@@ -99,7 +100,14 @@ class ClaudeLLM(LLMInterface):
             else:
                 # e.g. a bare array schema from RootModel[List[...]]: tool inputs must be objects
                 unwrap_items = True
+                # $defs must live at the schema root: nesting the whole array schema (defs
+                # included) under properties.items would leave any "$ref": "#/$defs/..."
+                # inside it unresolvable, since $ref is always resolved against the
+                # document root, not the local nesting level.
+                defs = schema.pop("$defs", None)
                 input_schema = {"type": "object", "properties": {"items": schema}, "required": ["items"]}
+                if defs:
+                    input_schema["$defs"] = defs
             create_kwargs["tools"] = [{
                 "name": tool_name,
                 "description": "Return the structured response for the request above.",
@@ -109,6 +117,13 @@ class ClaudeLLM(LLMInterface):
 
         try:
             resp = self.client.messages.create(**create_kwargs)
+
+            if resp.stop_reason == "max_tokens":
+                raise RuntimeError(
+                    "Claude response was truncated because max_tokens was too low "
+                    f"(max_tokens={create_kwargs['max_tokens']}). Increase 'max_tokens' in "
+                    "the options passed to generate_text for this request."
+                )
 
             if wrapper_model:
                 tool_use_block = next((b for b in resp.content if b.type == "tool_use"), None)
