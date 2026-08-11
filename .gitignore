@@ -1,6 +1,9 @@
 /.env
 /E4E_OERs_Cluster_MongoDB.txt
 /venv
+/.venv
+uvicorn.err.log
+uvicorn.out.log
 /__pycache__
 __pycache__/
 *.pyc

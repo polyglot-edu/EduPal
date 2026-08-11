@@ -10,6 +10,8 @@ from dotenv import load_dotenv
 
 load_dotenv()
 API_KEY = os.getenv("GEMINI_API_KEY", "")
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-flash-latest")
+GEMINI_IMAGE_MODEL = os.getenv("GEMINI_IMAGE_MODEL", "gemini-flash-latest")
 
 class GeminiLLM(LLMInterface):
     def __init__(self, api_key: Optional[str] = None):
@@ -17,8 +19,8 @@ class GeminiLLM(LLMInterface):
         if not api_key:
             raise ValueError("Gemini API key is required to initialize GeminiLLM")
         self.client = genai.Client(api_key=api_key)
-        self.model = "gemini-2.0-flash"
-        self.image_model = "gemini-2.0-flash"
+        self.model = GEMINI_MODEL
+        self.image_model = GEMINI_IMAGE_MODEL
 
     def generate_text(
         self,
@@ -82,8 +84,7 @@ class GeminiLLM(LLMInterface):
             # If no response model is specified, return the raw text
             return response.text
         except Exception as e:
-            #print(f"Error generating JSON with Gemini: {e}")
-            return ""
+            raise RuntimeError(f"Gemini generation failed: {e}") from e
         
     def generate_image(
         self,

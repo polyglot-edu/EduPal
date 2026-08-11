@@ -1,5 +1,6 @@
 from fastapi import APIRouter, FastAPI, HTTPException, Header
 from common.auth import authenticate
+from common.tier_restrictions import enforce_own_key_required
 from .translate_service import translate
 from .translate_utils import TranslateRequest, TranslateResponse
 
@@ -27,8 +28,9 @@ async def translate_text( request: TranslateRequest, access_key: str = Header(..
 
     Note that for JSONs, only the values will be translated.
     """
-    try: 
+    try:
         authenticate(access_key)
+        enforce_own_key_required(llm_token, "Translation")
 
         result = translate(request.text, request.language, request.model, llm_token=llm_token)
     except Exception as e:

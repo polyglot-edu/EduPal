@@ -1,5 +1,6 @@
 from fastapi import APIRouter, FastAPI, HTTPException, Header
 from common.auth import authenticate
+from common.tier_restrictions import enforce_own_key_required
 from .plan_lesson_service import lesson_plan
 from .plan_lesson_utils import PlanLessonRequest, LessonPlan
 
@@ -45,8 +46,9 @@ async def plan_lesson( request: PlanLessonRequest, access_key: str = Header(...)
     **context** _(str)_: the audience context
     **language** _(str)_: the language of the lesson
     """
-    try: 
+    try:
         authenticate(access_key)
+        enforce_own_key_required(llm_token, "Lesson planning")
         result = lesson_plan(request, llm_token=llm_token)
 
     except Exception as e:

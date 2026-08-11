@@ -443,14 +443,15 @@ async def upload(
     collection: AsyncIOMotorCollection,
     model: str = "Gemini",
     file: Optional[UploadFile] = File(None),
-    url: Optional[str] = Form(None)
+    url: Optional[str] = Form(None),
+    llm_token: Optional[str] = None
 ):
     """
     Upload a file and perform semantic chunking.
     """
-    try:      
+    try:
         # Analyse the material
-        analysed_material = await analysis(model=model, file=file, url=url) 
+        analysed_material = await analysis(model=model, file=file, url=url, llm_token=llm_token)
         #print(f"Analyzed material")
 
         if file is not None and file.filename != "":

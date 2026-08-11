@@ -1,5 +1,6 @@
 from fastapi import APIRouter, FastAPI, HTTPException, Header
 from common.auth import authenticate
+from common.tier_restrictions import enforce_own_key_required
 from .summarize_serivce import summary
 from .summarize_utils import SummarizeRequest, SummarizeResponse
 
@@ -28,8 +29,9 @@ async def summarize_text( request: SummarizeRequest, access_key: str = Header(..
     - **summary** _(str)_: The summarized text.
     - **keywords** _(list[str])_: A list of keywords relevant to the topic.
     """
-    try: 
+    try:
         authenticate(access_key)
+        enforce_own_key_required(llm_token, "Summarization")
 
         if len(request.text) < 200:
             raise HTTPException(status_code=400, detail="Text must be at least 200 characters.")

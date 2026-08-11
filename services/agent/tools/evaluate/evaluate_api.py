@@ -1,5 +1,6 @@
 from fastapi import APIRouter, FastAPI, HTTPException, Header
 from common.auth import authenticate
+from common.tier_restrictions import enforce_own_key_required
 from .evaluate_service import evaluation
 from .evaluate_utils import EvaluateRequest, Evaluation
 
@@ -44,8 +45,9 @@ async def evaluate( request: EvaluateRequest, access_key: str = Header(...), llm
     - **language** _(str)_: the language of the activity, defaults to English
     """
 
-    try: 
+    try:
         authenticate(access_key)
+        enforce_own_key_required(llm_token, "Activity evaluation")
         result = evaluation(request, llm_token=llm_token)
 
     except Exception as e:

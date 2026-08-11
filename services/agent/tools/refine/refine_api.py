@@ -1,5 +1,6 @@
 from fastapi import APIRouter, FastAPI, HTTPException, Header
 from common.auth import authenticate
+from common.tier_restrictions import enforce_own_key_required
 from .refine_service import refinement
 from .refine_utils import RefineRequest, Refinement
 
@@ -27,8 +28,9 @@ async def refine( request: RefineRequest, access_key: str = Header(...), llm_tok
     - **refined_json** _(str)_: the refined JSON object
     """
 
-    try: 
+    try:
         authenticate(access_key)
+        enforce_own_key_required(llm_token, "Refinement")
         result = refinement(request, llm_token=llm_token)
 
     except Exception as e:

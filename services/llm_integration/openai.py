@@ -133,8 +133,8 @@ class AzureOpenAILLM(LLMInterface):
             return output
 
         except Exception as e:
-            #print(f"Error generating text: {e}")
-            return str(e)
+            raise RuntimeError(f"Azure OpenAI generation failed: {e}") from e
+
     def generate_image(self, prompt: str) -> Image.Image:
         gen = self.client.images.generate(
             model=IMAGE_GEN_MODEL,
