@@ -61,7 +61,7 @@ async def generate_activity( request: GenerateActivityRequest, access_key: str =
         if hasattr(e, "status_code"):
             raise HTTPException(status_code=e.status_code, detail=str(e))
         else:
-            raise RuntimeError(f"Unexpected error: {e}")
+            raise HTTPException(status_code=500, detail=f"Unexpected error: {e}")
 
     return result
 

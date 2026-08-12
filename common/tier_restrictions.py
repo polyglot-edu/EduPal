@@ -5,6 +5,13 @@ def is_default_tier(llm_token: str | None) -> bool:
     """
     A request is on the default (shared, free) tier whenever the caller did not
     supply their own LLM API key, so the app's own shared key is used instead.
+
+    This is the only gate the free tier's restrictions key off of: as soon as a
+    caller sends their own llm_token (with any model, e.g. "Claude"), every
+    enforce_* check below is skipped - including any usage limit configured on
+    that key elsewhere (e.g. spend/rate caps set on the provider's own
+    dashboard for that key). This app applies no additional token/usage cap of
+    its own on top of that.
     """
     return not llm_token
 
