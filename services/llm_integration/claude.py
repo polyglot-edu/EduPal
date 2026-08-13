@@ -116,7 +116,19 @@ class ClaudeLLM(LLMInterface):
             create_kwargs["tool_choice"] = {"type": "tool", "name": tool_name}
 
         try:
-            resp = self.client.messages.create(**create_kwargs)
+            try:
+                resp = self.client.messages.create(**create_kwargs)
+            except Exception as e:
+                # Some models (e.g. ones with extended thinking on by default,
+                # like the one that surfaced this) reject an explicit
+                # temperature outright with a 400 "`temperature` is deprecated
+                # for this model" error instead of just ignoring it. Retry
+                # once without it rather than failing the whole request.
+                if "temperature" in create_kwargs and "temperature" in str(e).lower() and "deprecated" in str(e).lower():
+                    create_kwargs.pop("temperature")
+                    resp = self.client.messages.create(**create_kwargs)
+                else:
+                    raise
 
             if resp.stop_reason == "max_tokens":
                 raise RuntimeError(

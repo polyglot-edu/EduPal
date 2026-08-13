@@ -53,7 +53,7 @@ async def query_vector_search(request: QueryRequest, access_key: str = Header(..
         if hasattr(e, "status_code"):
             raise HTTPException(status_code=e.status_code, detail=str(e))
         else:
-            raise RuntimeError(f"Unexpected error: {e}")
+            raise HTTPException(status_code=500, detail=f"Unexpected error: {e}")
 
     return QueryResponse(result = "Query successful.", search_results=extracted_results)
 

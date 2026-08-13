@@ -29,12 +29,12 @@ from .openai import AzureOpenAILLM
 from .gemini import GeminiLLM
 from .claude import ClaudeLLM
 
-SUPPORTED_MODELS = ["GEMINI", "OPENAI", "CLAUDE"]
+SUPPORTED_MODELS = ["DEFAULT", "GEMINI", "OPENAI", "CLAUDE"]
 
 def get_llm(model, api_key: Optional[str] = None) -> LLMInterface:
     # check if the model is supported using a capitalized name
-    model = model.upper() if model is not None else "GEMINI"
-    if model == "OPENAI":
+    model = model.upper() if model else "DEFAULT"
+    if model in ("DEFAULT", "OPENAI"):
         return AzureOpenAILLM(api_key=api_key)
     elif model == "GEMINI":
         return GeminiLLM(api_key=api_key)
