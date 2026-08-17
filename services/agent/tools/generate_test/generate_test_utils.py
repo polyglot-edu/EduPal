@@ -20,7 +20,7 @@ class GenerateTestRequest(BaseModel):
     learning_outcome: LearningOutcome = LearningOutcome.UNDERSTANDING
     exercises: list[ActivityParams] = Field(default_factory=list)
     language: str = "English"
-    model: str = "Gemini"
+    model: str = "default"
  
 """Test text:
 {

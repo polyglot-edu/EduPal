@@ -26,7 +26,7 @@ class GenerateMaterialRequest(BaseModel):
     learning_outcome: LearningOutcome
     duration: int
     language: str = "English"
-    model: str = "Gemini"
+    model: str = "default"
     type_of_file: MaterialType = MaterialType.MARKDOWN
 
 class GenerateMaterialResponse(BaseModel):

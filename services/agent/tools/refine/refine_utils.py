@@ -6,7 +6,7 @@ class RefineRequest(BaseModel):
     json_object: str
     instructions: str
     language: str = "English"
-    model: str = "Gemini"
+    model: str = "default"
 
 class Refinement(BaseModel):
     refined_json: str

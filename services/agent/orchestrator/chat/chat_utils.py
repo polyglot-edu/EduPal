@@ -242,7 +242,7 @@ class ChatDocumentSimplified(BaseModel):
 class UpdateChatRequest(BaseModel):
     messages: List[Message] = Field(default_factory=list)
     state: State = Field(default_factory=State)
-    model: Optional[str] = "GEMINI"
+    model: Optional[str] = "default"
 #--------------------------------------------------------------------------------------------------------------------------
 
 # Create a request model for memory update
@@ -253,7 +253,7 @@ class UpdateStructuredMemoryRequest(BaseModel):
     ltm_length: int = LTM_LENGTH
     memory: Memory = Field(default_factory=Memory)
     personal_info: str = ""
-    model: Optional[str] = "GEMINI"
+    model: Optional[str] = "default"
 
 class UpdateStructuredMemoryResponse(BaseModel):
     structured_memory: StructuredMemory
@@ -301,7 +301,7 @@ class SendMessageRequest(BaseModel):
     memory: Memory
     state: State
     personal_info: Optional[PersonalInfo] = None
-    model: str = "GEMINI"
+    model: str = "default"
 
 
 STUDENT_SYSTEM_INSTRUCTIONS = """You are a tutor. Your goal is to help the student learn — not just give answers.

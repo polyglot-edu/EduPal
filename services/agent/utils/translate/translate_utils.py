@@ -6,7 +6,7 @@ class TranslateResponse(BaseModel):
 class TranslateRequest(BaseModel):
     text: str
     language: str = "English"
-    model: str = "Gemini"
+    model: str = "default"
 
 def translate_prompt(text, language="English"):
    prompt = f"""Translate the following text into {language}: '{text}'.
