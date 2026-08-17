@@ -20,7 +20,7 @@ class DefineSyllabusRequest(BaseModel):
     education_level: EducationLevel
     additional_information: str
     language: str = "English"
-    model: str = "Gemini"
+    model: str = "default"
 
 class Syllabus(BaseModel):
     general_subject: str

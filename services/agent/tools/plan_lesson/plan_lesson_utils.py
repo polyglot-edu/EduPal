@@ -30,7 +30,7 @@ class PlanLessonRequest(BaseModel):
     title: str
     education_level: EducationLevel
     context: str
-    model: str = "Gemini"
+    model: str = "default"
 
 
 class LessonPlan(BaseModel):

@@ -28,13 +28,16 @@ class LLMInterface(ABC):
 from .openai import AzureOpenAILLM
 from .gemini import GeminiLLM
 from .claude import ClaudeLLM
+from .groq import GroqLLM
 
-SUPPORTED_MODELS = ["DEFAULT", "GEMINI", "OPENAI", "CLAUDE"]
+SUPPORTED_MODELS = ["DEFAULT", "GROQ", "GEMINI", "OPENAI", "CLAUDE"]
 
 def get_llm(model, api_key: Optional[str] = None) -> LLMInterface:
     # check if the model is supported using a capitalized name
     model = model.upper() if model else "DEFAULT"
-    if model in ("DEFAULT", "OPENAI"):
+    if model in ("DEFAULT", "GROQ"):
+        return GroqLLM(api_key=api_key)
+    elif model == "OPENAI":
         return AzureOpenAILLM(api_key=api_key)
     elif model == "GEMINI":
         return GeminiLLM(api_key=api_key)

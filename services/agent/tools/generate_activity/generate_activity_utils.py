@@ -25,7 +25,7 @@ class GenerateActivityRequest(BaseModel):
     material: str
     params: list[ActivityParams]
     language: str = "English"
-    model: str = "Gemini"
+    model: str = "default"
 
 class GeneratedActivity(BaseModel):
     type: TypeOfActivity
@@ -45,7 +45,7 @@ class Activity(BaseModel):
     params: list[ActivityParams]
     generated_activities: list[GeneratedActivity]
     language: str = "English"
-    model: str = "Gemini"
+    model: str = "default"
 
 def generate_activity_prompt(request: GenerateActivityRequest):
    

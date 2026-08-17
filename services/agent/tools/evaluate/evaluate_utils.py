@@ -18,7 +18,7 @@ class EvaluateRequest(BaseModel):
     solutions: list[str]
     type: TypeOfActivity
     language: str = "English"
-    model: str = "Gemini"
+    model: str = "default"
 
 class EvaluateResponse(BaseModel):
     correctness_percentage: int

@@ -15,7 +15,7 @@ class AnalyseMaterialResponse(BaseModel):
 
 class AnalyseMaterialRequest(BaseModel):
     text: str
-    model: str = "Gemini"
+    model: str = "default"
 
 class Analysis(BaseModel):
     language: str

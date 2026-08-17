@@ -17,7 +17,7 @@ class PlanCourseRequest(BaseModel):
     number_of_lessons: int
     duration_of_lesson: int
     language: str = "English"
-    model: str = "Gemini"
+    model: str = "default"
 
 class PlanCourseResponse(BaseModel):
     prerequisites: List[str]
