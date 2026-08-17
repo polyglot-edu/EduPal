@@ -65,6 +65,11 @@ services:
       OPENAI_DEPLOYMENT_NAME: ${OPENAI_DEPLOYMENT_NAME}
       AZURE_OPENAI_IMAGE_DEPLOYMENT: ${AZURE_OPENAI_IMAGE_DEPLOYMENT}
 
+      # --- GROQ -----------------------------------------------------
+      GROQ_API_KEY: ${GROQ_API_KEY}
+      GROQ_MODEL: ${GROQ_MODEL:-llama-3.3-70b-versatile}
+      GROQ_BASE_URL: ${GROQ_BASE_URL:-https://api.groq.com/openai/v1}
+
       # --- Anthropic --------------------------------------------------------
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
       # Defaults mirror the code's own fallbacks. Written with `:-` rather than
