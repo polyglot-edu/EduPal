@@ -12,9 +12,9 @@ load_dotenv()
 
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 GROQ_BASE_URL = os.getenv("GROQ_BASE_URL", "https://api.groq.com/openai/v1")
-# Swap to "openai/gpt-oss-20b" or "openai/gpt-oss-120b" to use Groq's built-in
-# agentic tools (browser_search, code_interpreter) instead of Llama.
-GROQ_MODEL = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
+# openai/gpt-oss-120b is the higher-quality alternative with the same built-in
+# agentic tools (browser_search, code_interpreter); swap via env if needed.
+GROQ_MODEL = os.getenv("GROQ_MODEL", "openai/gpt-oss-20b")
 
 
 class GroqLLM(LLMInterface):
