@@ -65,8 +65,18 @@ services:
       OPENAI_DEPLOYMENT_NAME: ${OPENAI_DEPLOYMENT_NAME}
       AZURE_OPENAI_IMAGE_DEPLOYMENT: ${AZURE_OPENAI_IMAGE_DEPLOYMENT}
 
+      # --- Anthropic --------------------------------------------------------
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      # Defaults mirror the code's own fallbacks. Written with `:-` rather than
+      # a bare ${VAR} because Compose sets an unset variable to "", and
+      # os.getenv only falls back when the key is absent — a bare reference
+      # would send an empty model name to the provider.
+      ANTHROPIC_MODEL: ${ANTHROPIC_MODEL:-claude-sonnet-5}
+
       # --- Google -----------------------------------------------------------
       GEMINI_API_KEY: ${GEMINI_API_KEY}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-flash-latest}
+      GEMINI_IMAGE_MODEL: ${GEMINI_IMAGE_MODEL:-gemini-flash-latest}
       GOOGLE_SEARCH_API_KEY: ${GOOGLE_SEARCH_API_KEY}
       GOOGLE_CSE_ID: ${GOOGLE_CSE_ID}
 
