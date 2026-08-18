@@ -12,9 +12,9 @@ load_dotenv()
 
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 GROQ_BASE_URL = os.getenv("GROQ_BASE_URL", "https://api.groq.com/openai/v1")
-# Swap to "openai/gpt-oss-20b" or "openai/gpt-oss-120b" to use Groq's built-in
-# agentic tools (browser_search, code_interpreter) instead of Llama.
-GROQ_MODEL = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
+# openai/gpt-oss-120b is the higher-quality alternative with the same built-in
+# agentic tools (browser_search, code_interpreter); swap via env if needed.
+GROQ_MODEL = os.getenv("GROQ_MODEL", "openai/gpt-oss-20b")
 
 
 class GroqLLM(LLMInterface):
@@ -32,7 +32,7 @@ class GroqLLM(LLMInterface):
         response_model: Optional[Type[BaseModel]] = None,
         context: Optional[str] = "",
         history: Optional[str] = "",
-        options: Optional[Dict] = {"temperature": 0.0, "max_tokens": 1000},
+        options: Optional[Dict] = {"temperature": 0.0, "max_tokens": 8192},
         user_info: Optional[str] = "",
         instructions: Optional[str] = "",
         tools: Optional[List[str]] = None,
@@ -97,7 +97,7 @@ class GroqLLM(LLMInterface):
                 model=self.model,
                 messages=messages,
                 temperature=options.get("temperature", 0.0),
-                max_tokens=options.get("max_tokens", 1000),
+                max_tokens=options.get("max_tokens", 8192),
             )
             output = resp.choices[0].message.content.strip()
             if output.startswith("```json"):

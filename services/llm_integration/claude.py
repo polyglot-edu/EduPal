@@ -28,7 +28,10 @@ class ClaudeLLM(LLMInterface):
         response_model: Optional[Type[BaseModel]] = None,
         context: Optional[str] = "",
         history: Optional[str] = "",
-        options: Optional[Dict] = {"temperature": 0.0, "max_tokens": 1000},
+        # 8192 is a generous ceiling supported broadly across current Claude
+        # Sonnet models without needing special beta headers - callers should
+        # not be capped by an arbitrarily low default here.
+        options: Optional[Dict] = {"temperature": 0.0, "max_tokens": 8192},
         user_info: Optional[str] = "",
         instructions: Optional[str] = "",
         tools: Optional[List[str]] = None,
@@ -83,7 +86,7 @@ class ClaudeLLM(LLMInterface):
             model=self.model,
             system=system_prompt,
             messages=messages,
-            max_tokens=options.get("max_tokens", 1000),
+            max_tokens=options.get("max_tokens", 8192),
             temperature=options.get("temperature", 0.0),
         )
 

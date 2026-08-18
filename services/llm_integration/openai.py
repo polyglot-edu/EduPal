@@ -37,7 +37,7 @@ class AzureOpenAILLM(LLMInterface):
         response_model: Optional[Type[BaseModel]] = None,
         context: Optional[str] = "",
         history: Optional[str] = "",
-        options: Optional[Dict] = {"temperature": 0.0, "max_tokens": 1000},
+        options: Optional[Dict] = {"temperature": 0.0, "max_tokens": 8192},
         user_info: Optional[str] = "",
         instructions: Optional[str] = "",
         tools: Optional[List[str]] = None,
@@ -99,7 +99,7 @@ class AzureOpenAILLM(LLMInterface):
                 model=self.deployment,
                 messages=messages,
                 temperature=options.get("temperature", 0.0),
-                max_tokens=options.get("max_tokens", 1000)
+                max_tokens=options.get("max_tokens", 8192)
             )
             output = resp.choices[0].message.content.strip()
             if output.startswith("```json"):
